@@ -201,6 +201,8 @@ xray(Root,Item,[type|T],Acc) ->
     xray(Root,Item,T,[File_info#file_info.type|Acc]);
 xray(Root,Item,[relative_full_name|T],Acc) ->
     xray(Root,Item,T,[Item|Acc]);
+xray(Root,Item,[absolute_full_name|T],Acc) ->
+    xray(Root,Item,T,[filename:join(Root,Item)|Acc]);
 xray(_,_,[],Acc) ->
     lists:reverse(Acc).
     

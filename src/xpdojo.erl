@@ -38,12 +38,12 @@ dashboard( [{directory,Name}], _Atom) ->
 		   (_,Acc) ->
 			Acc
 		end,
-    Files = adlib:fold_files(Name,KeepFiles,[type,relative_full_name],[]),
+    Files = adlib:fold_files(Name,KeepFiles,[type,absolute_full_name],[]),
     case Files of
 	[] ->
 	    empty_project;
 	List when list(List) ->
-	    {0,[]}
+	    dashboard([{files,Files}],_Atom)
     end;
 dashboard( [{files,Files}], _Atom) ->
     ModuleCompilation = compileModules(Files),

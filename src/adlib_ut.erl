@@ -292,3 +292,19 @@ fold_files_pick_files_test() ->
 			   ["tata.xml","titi.txt",bla] = adlib:fold_files(Root2,Action,[type,relative_full_name],[bla])
 		   end).
 
+fold_files_pick_files_absolute_test() ->
+    Root = adlib:temporary_pathname(),
+    Action = fun([regular,Name],Acc) ->
+		     [Name|Acc];
+		(_,Acc) ->
+		     Acc
+	     end,
+    adlib:use_tree(Root,[{directory,"Dir1",[]},
+			 {file,"titi.txt",[]},
+			 {directory,"Dir2",[]},
+			 {file,"tata.xml",[]}],
+		   fun(Root2,_Tree) ->
+			   Expected = [filename:join(Root2,"tata.xml"),filename:join(Root2,"titi.txt"), bla],
+			   Expected = adlib:fold_files(Root2,Action,[type,absolute_full_name],[bla])
+		   end).
+    
