@@ -32,3 +32,9 @@
 modules_from_directory_test() ->
     [] = compiling:modules_from_directory ([], ""),
     [toto] = compiling:modules_from_directory ([{toto, "/tmp/foo/dir/toto.beam"}, {titi, "/tmp/dodo/titi.beam"}], "/tmp/foo").
+
+differences_test() ->
+    [] = compiling:differences ([], []),
+    [{added, ["/tmp/titi.erl", "/tmp/toto.erl"]}] = compiling:differences ([], ["/tmp/toto.erl", "/tmp/titi.erl"]),
+    [{added, ["/tmp/toto.erl"]}] = compiling:differences ([titi], ["/tmp/toto.erl", "/tmp/titi.erl"]).
+

@@ -1,4 +1,4 @@
-%%% Copyright (c) 2004 Dominic Williams, Nicolas Charpentier.
+%%% Copyright (c) Dominic Williams, Nicolas Charpentier.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -253,5 +253,4 @@ is_below_directory_test() ->
     false = adlib:is_below_directory ("/tmp", "/home/toto"),
     false = adlib:is_below_directory ("/tmpbla", "/tmp"),
     true = adlib:is_below_directory ("/Users/dodo/dir/my_file", "/Users").
-
 

@@ -223,7 +223,7 @@ accumulate_if (_, List, false) ->
 is_below_directory (Path1, Path2) ->
     is_below_directory2 (lists:reverse (filename:split (Path1)), lists:reverse (filename:split(Path2))).
 
-is_below_directory2 ([], Path2) ->
+is_below_directory2 ([], _Path2) ->
     false;
 is_below_directory2 (Path1, Path2)  when Path1 == Path2 ->
     true;

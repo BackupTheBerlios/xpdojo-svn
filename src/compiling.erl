@@ -27,7 +27,7 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module (compiling).
--export ([modules_from_directory/2]).
+-export ([modules_from_directory/2, differences/2]).
 
 
 modules_from_directory (Modules, Directory) ->
@@ -37,4 +37,21 @@ modules_from_directory (Modules, Directory) ->
       end,
       [],
       Modules).
+
+differences (Modules, Files) ->
+    differences2 (lists:sort (Modules), lists:keysort (1, add_module_key (Files)), []).
+
+differences2 ([Module1|Remaining_modules], [{Module2,File}|Remaining_files], Acc) when Module1 == Module2 ->
+    differences2 (Remaining_modules, Remaining_files, Acc);
+differences2 (Modules=[Module1|Remaining_modules], [{Module2,File}|Remaining_files], Acc) when Module1 > Module2 ->
+    differences2 (Modules, Remaining_files, [File|Acc]);
+differences2 ([], [{Module1, File} | T], Acc) ->
+    differences2 ([], T, [File|Acc]);
+differences2 (_, [], []) ->
+    [];
+differences2 (_, [], Acc) ->
+    [{added, lists:reverse (Acc)}].
+
+add_module_key (Files) ->
+    [{list_to_atom(filename:basename (X, ".erl")), X} || X <- Files].
 
