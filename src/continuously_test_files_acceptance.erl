@@ -218,3 +218,22 @@ unchanged_test() ->
 	      unchanged = xpdojo:test_files (Dir)
       end).
     
+continue_after_compile_error_test() ->
+    use_and_purge_tree (
+      [foo()],
+      fun (Dir,_) ->
+	      [{acceptance,0,0},{unit,0,0},{modules,1,1}] = xpdojo:test_files (Dir),
+	      timer:sleep(2000),
+	      file:write_file(filename:join(Dir,"foo.erl"),
+			      "-module(foo).\n"
+			      "-export([yo/0]).\n"
+			      "yo() - yohoho."),
+	      [{modules,1,0}] = xpdojo:test_files (Dir),
+	      timer:sleep(2000),
+	      file:write_file(filename:join(Dir,"foo.erl"),
+			      "-module(foo).\n"
+			      "-export([yo/0]).\n"
+			      "yo() -> yohoho."),
+	      [{acceptance,0,0},{unit,0,0},{modules,1,1}] = xpdojo:test_files (Dir)
+      end).
+      
