@@ -187,12 +187,16 @@ begins_with(Token) ->
 fold_files(Root,Action,Options,Acc) when list(Root) ->
     {ok,Content} = file:list_dir(Root),
     lists:foldl(fun(Item,Acc2) ->
-			  fold_files(Root,Item,Options,Action,Acc2)
+			[Type] = xray(Root,Item,[type],[]),
+			fold_files(Type,Root,Item,Options,Action,Acc2)
 		end,
 		Acc,
 		Content).
 
-fold_files(Root,Item,Options,Action,Acc) ->
+fold_files(directory,Root,Item,Options,Action,Acc) ->
+    fold_files(filename:join(Root,Item),Action,Options,
+	       Action(xray(Root,Item,Options,[]),Acc));
+fold_files(_Type,Root,Item,Options,Action,Acc) ->
     Action(xray(Root,Item,Options,[]),Acc).
 
 xray(Root,Item,[type|T],Acc) ->
@@ -202,6 +206,8 @@ xray(Root,Item,[relative_full_name|T],Acc) ->
     xray(Root,Item,T,[Item|Acc]);
 xray(Root,Item,[absolute_full_name|T],Acc) ->
     xray(Root,Item,T,[filename:join(Root,Item)|Acc]);
+xray(Root,Item,[extension|T],Acc) ->
+    xray(Root,Item,T,[filename:extension(Item)|Acc]);
 xray(_,_,[],Acc) ->
     lists:reverse(Acc).
     

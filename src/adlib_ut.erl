@@ -74,7 +74,6 @@ tree_handling_test() ->
     {error,enoent} = file:read_file_info(Tmp_dirname),
     pass.
 
-    
 tree_using_test() ->
     Tmp_dirname = adlib:temporary_pathname(),
     Tree = tree(),
@@ -92,14 +91,13 @@ tree_using_test() ->
     BoumFun = fun(_Dir,_UsedTree) ->
 		      false = true
 	      end,
-    %{{badmatch,_},_} = adlib:use_tree(Tmp_dirname,Tree,BoumFun),
+
     case catch adlib:use_tree(Tmp_dirname,Tree,BoumFun) of
 	{'EXIT',{{badmatch,true},_}} ->
 	    ok
     end,
     {error,enoent} = file:read_file_info(Tmp_dirname),
     ok.
-
     
 first_test() ->
 	Three = fun(X) -> X == 3 end,
@@ -176,91 +174,6 @@ begins_with_fun_test() ->
     Begins_with_bla = adlib:begins_with("bla"),
     true = Begins_with_bla("blarhubarb").
     
-% simple_fold_files_test () ->
-%     Filter = fun(file,_Name) ->
-% 		     true;
-% 		(_,_) ->
-% 		     false
-% 	     end,
-%     adlib:use_tree(adlib:temporary_pathname(),
-%  		   [{file,"toto.abc",[]}],
-%  		   fun(Root,_Tree) ->
-%  			   Expected = [{Root,"toto",".abc"}],
-%  			   Expected = adlib:fold_files(Root,Filter)
-%  		   end),
-    
-%     adlib:use_tree(adlib:temporary_pathname(),
-%  		   [{file,"toto.abc",[]},
-%  		    {directory,"Dir1",[]}],
-%  		   fun(Root,_Tree) ->
-%  			   Expected = [{Root,"toto",".abc"}],
-%  			   Expected = adlib:fold_files(Root,Filter)
-%  		   end),
-    
-%     adlib:use_tree(adlib:temporary_pathname(),
-%  		   [{file,"toto.abc",[]},
-%  		    {directory,"Dir1",[{file,"toto2.abc",[]}]}],
-%  		   fun(Root,_Tree) ->
-%  			   Expected = [{Root,"toto",".abc"},{filename:join(Root,"Dir1"),"toto2",".abc"}],
-%  			   Expected = adlib:fold_files(Root,Filter)
-%  		   end),
-%     TxtFun = fun(".txt") ->
-% 		     true;
-% 		(_) ->
-% 		     false
-% 	     end,
-
-%     FilterOnTxt = fun(file,Name) ->
-% 			  TxtFun(filename:extension(Name));
-% 		     (_,_) ->
-% 			  false
-% 		  end,
-		  
-%     adlib:use_tree(adlib:temporary_pathname(),
-%  		   [{file,"toto.abc",[]},
-%  		    {directory,"Dir1",[{file,"toto2.txt",[]}]}],
-%  		   fun(Root,_Tree) ->
-%  			   Expected = [{filename:join(Root,"Dir1"),"toto2",".txt"}],
-%  			   Expected = adlib:fold_files(Root,FilterOnTxt)
-%  		   end).
-
-
-    
-% fold_files_test() ->
-%     Filter = fun(file,_Name) ->
-% 		     true;
-% 		(_,_) ->
-% 		     false
-% 	     end,
-%     Action = fun(file, Path, Name, Extension, Acc) ->
-% 		     [{Path,Name,Extension}|Acc]
-% 	     end,
-%      adlib:use_tree(adlib:temporary_pathname(),
-%  		   [{file,"toto.abc",[]}],
-%  		   fun(Root,_Tree) ->
-%  			   Expected = [{Root,"toto",".abc"}],
-%  			   Expected = adlib:fold_files(Root,Filter,Action,[])
-%  		   end).
-
-%     adlib:use_tree(adlib:temporary_pathname(),
-% 		   [{file,"toto.abc",[]},
-% 		    {directory,"Dir1",
-% 		     [{file,"titi",[]},{file,"tata.defg",[]}]}],
-% 		   fun(Root,_Tree) ->
-% 			   Expected = [{Root,"toto","abc"},
-% 				       {filename:join(Root,"Dir1"),"titi",""},
-% 				       {filename:join(Root,"Dir1"),"tata","defg"}],
-% 			   Expected = adlib:fold_files(Root,Filter,Action,[])
-% 		   end).
-		   
-    
-% fold_files_nonexistent_root_test() ->
-%     Root = adlib:temporary_pathname(),
-%     {error,enoent} = file:list_dir(Root),
-%     Filter = fun() -> true end,
-%     Action = fun(Acc) -> Acc end,
-%      = (catch adlib:fold_files(Root,Filter,Action,[hello])).
-
 fold_files_empty_root_test() ->
     Root = adlib:temporary_pathname(),
     Action = fun(Item,Acc) -> [Item|Acc] end,
@@ -306,5 +219,25 @@ fold_files_pick_files_absolute_test() ->
 		   fun(Root2,_Tree) ->
 			   Expected = [filename:join(Root2,"tata.xml"),filename:join(Root2,"titi.txt"), bla],
 			   Expected = adlib:fold_files(Root2,Action,[type,absolute_full_name],[bla])
+		   end).
+    
+fold_files_pick_erlang_source_absolute_with_subdirectory_test() ->
+    Root = adlib:temporary_pathname(),
+    Action = fun([regular,".erl",Name],Acc) ->
+		     [Name|Acc];
+		(_,Acc) ->
+		     Acc
+	     end,
+    adlib:use_tree(Root,[{directory,"Dir1",[]},
+			 {file,"titi.txt",[]},
+			 {file,"toto.erl",[]},
+			 {directory,"Dir2",
+			  [{file,"tata.xml",[]},
+			   {file,"tutu.erl",[]}]},
+			 {file,"tete.log",[]}],
+		   fun(Root2,_Tree) ->
+			   Expected = [filename:join(Root2,filename:join("Dir2","tutu.erl")),
+				       filename:join(Root2,"toto.erl"), bla],
+			   Expected = adlib:fold_files(Root2,Action,[type,extension,absolute_full_name],[bla])
 		   end).
     
