@@ -59,6 +59,8 @@ compile (Files) ->
       Files).
 
 accumulate_if_succeeded ({ok, Module}, Acc) ->
+    code:purge(Module),
+    {module, Module} = code:load_file(Module),
     [Module|Acc];
 accumulate_if_succeeded (_, Acc) ->
     Acc.

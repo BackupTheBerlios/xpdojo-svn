@@ -181,6 +181,28 @@ single_failing_acceptance_test() ->
 		    fun (Dir,_) ->
 			    [{acceptance,1,0}, {unit,0,0}, {modules,2,2}] = xpdojo:test_files (Dir)
 		    end).
+
+reload_changed_file_test() ->    
+    adlib:use_tree (adlib:temporary_pathname(),
+		    [foo(), foo_ut()],
+		    fun (Dir,_) ->
+			    [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir),
+			    file:write_file(filename:join(Dir,"foo_ut.erl"),
+					    "-module(foo_ut).\n"
+					    "-export([foo_test/0]).\n"
+					    "foo_test() -> nok = foo:bar()."),
+			    [{unit,1,0}, {modules,2,2}] = xpdojo:test_files (Dir)
+		    end).
+%     adlib:use_tree (adlib:temporary_pathname(),
+% 		    [foo(), bad_foo_ut()],
+% 		    fun (Dir,_) ->
+% 			    [{unit,1,0}, {modules,2,2}] = xpdojo:test_files (Dir),
+% 			    file:write_file(filename:join(Dir,"foo_ut.erl"),
+% 					    "-module(foo_ut).\n"
+% 					    "-export([foo_test/0]).\n"
+% 					    "foo_test() -> ok = foo:bar()."),
+% 			    [{unit,1,0}, {modules,2,2}] = xpdojo:test_files (Dir)
+% 		    end).
     
 %     Dir = adlib:temporary_pathname(),
 %     Project = [{directory, Dir}],
