@@ -69,14 +69,24 @@ accumulate_if_succeeded (_, Acc) ->
 %     [{unit,Total,Total-length(Failures)}, {modules,Total_module_count,length(Compiled_modules)}].
 
 unit (Mod_filter, Fun_filter) ->
-    fun({Total_module_count, Compiled_modules}) ->
+    fun({0,[]}) ->
+	    [{modules,0,[]}];
+       ({Total_module_count, Compiled_modules}) when length(Compiled_modules) < Total_module_count ->
+	    [{modules, Total_module_count, Compiled_modules}];
+       ({Total_module_count, Compiled_modules}) ->
 	    Unit_tests = [X || X <- Compiled_modules, Mod_filter(X)],
 	    {Total,Failures} = testing:run_modules (Unit_tests, Fun_filter),
-	    [{unit,Total,Total-length(Failures)}, {modules,Total_module_count,length(Compiled_modules)}]
+	    [{unit, Total, Total- length (Failures)}, {modules, Total_module_count, Compiled_modules}]
     end.
 
-acceptance ( Results ) ->
-    [{acceptance,0,0}|Results].
+acceptance ([{modules, Count, Compiled_modules}]) ->
+    [{modules, Count, length (Compiled_modules)}];
+acceptance ([{unit, Total, Successes}, {modules, Count, Compiled_modules}]) when Successes < Total ->
+    [{unit, Total, Successes}, {modules, Count, length (Compiled_modules)}];
+acceptance ([{unit, UnitTotal, UnitSuccesses}, {modules, Module_total, Compiled_modules}]) ->
+    Acceptance_tests = [X || X <- Compiled_modules, adlib:ends_with(X, "_acceptance")],
+    {Total, Failures} = testing:run_modules (Acceptance_tests, adlib:ends_with("_test")),
+    [{acceptance, Total, Total - length (Failures)}, {unit, UnitTotal, UnitSuccesses}, {modules,Module_total,length(Compiled_modules)}].
     
 dashboard( [{files,[]}], _Atom) ->
     empty_project;

@@ -87,7 +87,7 @@ directory_empty_test() ->
     adlib:use_tree(adlib:temporary_pathname(),
 		   [],
 		   fun(Dir,_) ->
-			   [{acceptance,0,0},{unit,0,0},{modules,0,0}] = xpdojo:test_files (Dir)
+			   [{modules,0,0}] = xpdojo:test_files (Dir)
 		   end).
 
 tree_without_code() ->
@@ -104,7 +104,7 @@ tree_without_code_test() ->
     adlib:use_tree (adlib:temporary_pathname(),
 		    tree_without_code(),
 		    fun (Dir,_) ->
-			    [{acceptance,0,0},{unit,0,0},{modules,0,0}] = xpdojo:test_files (Dir)
+			    [{modules,0,0}] = xpdojo:test_files (Dir)
 		    end).
 
 single_module_test() ->
@@ -118,7 +118,7 @@ multi_module_test() ->
     adlib:use_tree (adlib:temporary_pathname(),
 		    [foo(), bad_bar(), baz()],
 		    fun (Dir,_) ->
-			    [{acceptance,0,0}, {unit,0,0}, {modules,3,2}] = xpdojo:test_files (Dir)
+			    [{modules,3,2}] = xpdojo:test_files (Dir)
 		    end).
 
 single_module_with_unit_test() ->
@@ -132,7 +132,14 @@ multi_module_with_one_failing_unit_test() ->
     adlib:use_tree (adlib:temporary_pathname(),
 		    [foo(), foo_ut(), bar(), bad_bar_ut()],
 		    fun (Dir,_) ->
-			    [{acceptance,0,0}, {unit,2,1}, {modules,4,4}] = xpdojo:test_files (Dir)
+			    [{unit,2,1}, {modules,4,4}] = xpdojo:test_files (Dir)
+		    end).
+
+failing_build_bails_out_test() ->
+    adlib:use_tree (adlib:temporary_pathname(),
+		    [foo(), bad_bar(), baz(), foo_ut()],
+		    fun (Dir,_) ->
+			    [{modules,4,3}] = xpdojo:test_files (Dir)
 		    end).
 
 
@@ -158,7 +165,21 @@ custom_unit_filters_test() ->
     adlib:use_tree (adlib:temporary_pathname(),
 		    [foo(), foo_ut(), foo_more_utt(), foo_utt()],
 		    fun (Dir,_) ->
-			    [{acceptance,0,0}, {unit,3,2}, {modules,4,4}] = xpdojo:test_files (Dir, Options)
+			    [{unit,3,2}, {modules,4,4}] = xpdojo:test_files (Dir, Options)
+		    end).
+
+foo_acceptance() ->
+    {file,"foo_acceptance.erl",
+     ["-module(foo_acceptance).",
+      "-export([bar_tt/0, toto_test/0]).",
+      "bar_tt() -> ok = foo:bar().",
+      "toto_test() -> hoho = foo:bar()."]}.
+    
+single_failing_acceptance_test() ->
+    adlib:use_tree (adlib:temporary_pathname(),
+		    [foo(), foo_acceptance()],
+		    fun (Dir,_) ->
+			    [{acceptance,1,0}, {unit,0,0}, {modules,2,2}] = xpdojo:test_files (Dir)
 		    end).
     
 %     Dir = adlib:temporary_pathname(),
