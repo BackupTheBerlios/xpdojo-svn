@@ -65,6 +65,18 @@ bar() ->
       "-export([foo/0]).",
       "foo() -> ok."]}.
 
+bad_bar_ut() ->
+    {file,"bar_ut.erl",
+     ["-module(bar_ut).",
+      "-export([foo_test/0]).",
+      "foo_test() -> nok = bar:foo()."]}.
+
+bar_ut() ->
+    {file,"bar_ut.erl",
+     ["-module(bar_ut).",
+      "-export([foo_test/0]).",
+      "foo_test() -> ok = bar:foo()."]}.
+
 file_list_empty_cat()->
     Project = [{files,[]}],
     empty_project = xpdojo:dashboard(Project, unit_tests).
@@ -161,3 +173,26 @@ directory_with_several_modules_cat() ->
 		   fun(Dir2,_Tree) ->
 			   {1,[]} = xpdojo:dashboard([{directory,Dir2}], unit_tests)
 		   end).
+
+add_module_to_directory_cat() ->
+    Dir = adlib:temporary_pathname(),
+    Tree = [foo(),foo_ut(),bar()],
+    adlib:use_tree(Dir,
+		   Tree,
+		   fun(Dir2,_Tree) ->
+			   {1,[]} = xpdojo:dashboard([{directory,Dir2}], unit_tests),
+			   file:write_file(filename:join(Dir,"bar_ut.erl"),
+					   "-module(bar_ut).\n"
+					   "-export([foo_test/0]).\n"
+					   "foo_test() -> nok = bar:foo()."),
+			   {2,[{{badmatch,ok},_Stack}]} = xpdojo:dashboard([{directory,Dir2}], unit_tests),
+			   file:write_file(filename:join(Dir,"bar_ut.erl"),
+					   "-module(bar_ut).\n"
+					   "-export([foo_test/0]).\n"
+					   "foo_test() -> ok = bar:foo()."),
+			   {2,[]} = xpdojo:dashboard([{directory,Dir2}], unit_tests)
+		   end).
+    
+
+    
+    
