@@ -27,8 +27,9 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module (compiling).
--export ([modules_from_directory/2, differences/2]).
+-export ([modules_from_directory/2, differences/2, differences/3, file_time/1, module_time/1]).
 
+-include_lib("kernel/include/file.hrl").
 
 modules_from_directory (Modules, Directory) ->
     lists:foldl (
@@ -38,20 +39,53 @@ modules_from_directory (Modules, Directory) ->
       [],
       Modules).
 
+module_time (Module) ->
+    file_time (element (2, code:is_loaded (Module))).
+
+file_time (File) ->
+    {ok, File_info} = file:read_file_info(File),
+    {{Y,M,D},{H,Min,S}} = File_info#file_info.mtime,
+    {Y,M,D,H,Min,S}.
+
+is_modified (Module, File) ->
+    module_time (Module) < file_time (File).
+
 differences (Modules, Files) ->
-    differences2 (lists:sort (Modules), lists:keysort (1, add_module_key (Files)), []).
+    differences (Modules, Files, fun is_modified/2).
 
-differences2 ([Module1|Remaining_modules], [{Module2,File}|Remaining_files], Acc) when Module1 == Module2 ->
-    differences2 (Remaining_modules, Remaining_files, Acc);
-differences2 (Modules=[Module1|Remaining_modules], [{Module2,File}|Remaining_files], Acc) when Module1 > Module2 ->
-    differences2 (Modules, Remaining_files, [File|Acc]);
-differences2 ([], [{Module1, File} | T], Acc) ->
-    differences2 ([], T, [File|Acc]);
-differences2 (_, [], []) ->
-    [];
-differences2 (_, [], Acc) ->
-    [{added, lists:reverse (Acc)}].
+differences (Modules, Files, Is_modified_fun) ->
+    Sorted_modules = lists:sort (Modules),
+    Files_with_module_key = [{module_name (X), X} || X <- Files],
+    Files_sorted_by_module = lists:keysort (1, Files_with_module_key),
+    differences2 (Sorted_modules, Files_sorted_by_module, [], [], [], Is_modified_fun).
 
-add_module_key (Files) ->
-    [{list_to_atom(filename:basename (X, ".erl")), X} || X <- Files].
+differences2 ([Module | Modules_tail], [{Module, File} | Files_tail], Added, Deleted, Modified, Is_modified) ->
+    differences2 (Modules_tail, Files_tail, Added, Deleted, adlib:accumulate_if (File, Modified, Is_modified (Module, File)), Is_modified);
+
+differences2 (Modules = [Module1 | _], [{Module2, File} | Files_tail], Added, Deleted, Modified, Is_modified) when Module1 > Module2 ->
+    differences2 (Modules, Files_tail, [File | Added], Deleted, Modified, Is_modified);
+
+differences2 ([Module1|Remaining_modules], Files=[{Module2,_}|_], Added, Deleted, Modified, Is_modified) when Module1 < Module2 ->
+    differences2 (Remaining_modules, Files, Added, [Module1|Deleted], Modified, Is_modified);
+
+differences2 ([], [{_Module, File} | T], Added, Deleted, Modified, Is_modified) ->
+    differences2 ([], T, [File|Added], Deleted, Modified, Is_modified);
+
+differences2 ([Module|T], [], Added, Deleted, Modified, Is_modified) ->
+    differences2 (T, [], Added, [Module|Deleted], Modified, Is_modified);
+
+differences2 ([], [], Added, Deleted, Modified, _) ->
+    cleanup_accumulators ([{added, Added}, {deleted, Deleted}, {modified, Modified}], []).
+
+cleanup_accumulators ([{_Atom, []} | T], Acc) ->
+    cleanup_accumulators (T, Acc);
+
+cleanup_accumulators ([{Atom, List} | T], Acc) ->
+    cleanup_accumulators (T, [{Atom, lists:reverse (List)} | Acc]);
+
+cleanup_accumulators ([], Acc) ->
+    lists:reverse (Acc).
+
+module_name (File) ->
+    list_to_atom (filename:basename (File, ".erl")).
 

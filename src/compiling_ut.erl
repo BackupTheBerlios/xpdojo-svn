@@ -31,10 +31,22 @@
 
 modules_from_directory_test() ->
     [] = compiling:modules_from_directory ([], ""),
-    [toto] = compiling:modules_from_directory ([{toto, "/tmp/foo/dir/toto.beam"}, {titi, "/tmp/dodo/titi.beam"}], "/tmp/foo").
+    [toto] = compiling:modules_from_directory ([{toto, "/tmp/foo/dir/toto.beam"}, {titi, "/tmp/dodo/titi.beam"}], "/tmp/foo"),
+    [titi, toto] = compiling:modules_from_directory ([{toto, "/tmp/foo/dir/toto.beam"}, {tata, "/Users/foo/tata.beam"}, {titi, "/tmp/foo/titi.beam"}], "/tmp/foo").
+    
 
 differences_test() ->
     [] = compiling:differences ([], []),
-    [{added, ["/tmp/titi.erl", "/tmp/toto.erl"]}] = compiling:differences ([], ["/tmp/toto.erl", "/tmp/titi.erl"]),
-    [{added, ["/tmp/toto.erl"]}] = compiling:differences ([titi], ["/tmp/toto.erl", "/tmp/titi.erl"]).
-
+    [{added, ["/tmp/titi.erl", "/tmp/toto.erl"]}] =
+	compiling:differences ([], ["/tmp/toto.erl", "/tmp/titi.erl"]),
+    Never_modified_fun = fun (_Module, _File) -> false end,
+    [{added, ["/tmp/toto.erl"]}] =
+	compiling:differences ([titi], ["/tmp/toto.erl", "/tmp/titi.erl"], Never_modified_fun),
+    [] = compiling:differences ([titi, toto], ["/tmp/foo/toto.erl", "/Users/prog/titi.erl"], Never_modified_fun),
+    [{deleted, [mod1, mod2]}] =
+	compiling:differences ([mod1, mod4, mod2, mod3], ["/tmp/mod3.erl", "/tmp/foo/mod4.erl"], Never_modified_fun),
+    [{added, ["/tmp/titi.erl"]}, {deleted, [mod1]}] =
+	compiling:differences ([mod1, mod2], ["/tmp/tutu/mod2.erl", "/tmp/titi.erl"], Never_modified_fun),
+    [{modified, ["/tmp/toto.erl"]}] =
+	compiling:differences ([toto], ["/tmp/toto.erl"], fun (_Module, _File) -> true end),
+    ok.

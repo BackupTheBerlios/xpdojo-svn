@@ -213,6 +213,6 @@ unchanged_test() ->
 		    {directory,"unit",[foo_ut(), bar_ut()]}],
 		    fun (Dir,_) ->
 			    [{acceptance,1,0}, {unit,2,2}, {modules,5,5}] = xpdojo:test_files (Dir),
-			    [unchanged] = xpdojo:test_files (Dir)
+			    unchanged = xpdojo:test_files (Dir)
 		    end).
     
