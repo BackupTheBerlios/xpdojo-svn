@@ -52,26 +52,54 @@ temporary_module_name_test() ->
 	false = string:equal(Name,Next_name),
 	pass.
 	
+tree() ->
+    [{file,"test","Hello world"},
+     {file,"test2",["Goodbye","world!"]},
+     {directory,"testdir",[{file,"toto","Silly"},
+			   {directory,"testdir2",[{file,"titi","Very silly"}]}]}].
+    
 tree_handling_test() ->
-	Tmp_dirname = adlib:temporary_pathname(),
-	{error,enoent} = file:read_file_info(Tmp_dirname),
-	Tree = [{file,"test","Hello world"},
-			{file,"test2",["Goodbye","world!"]},
-			{directory,"testdir",[{file,"toto","Silly"},
-								  {directory,"testdir2",[{file,"titi","Very silly"}]}]}],
-	adlib:make_tree(Tmp_dirname,Tree),
-	{ok,Content} = file:read_file(filename:join(Tmp_dirname,"test")),
-	"Hello world" = binary_to_list(Content),
-	{ok,Content2} = file:read_file(filename:join(Tmp_dirname,"test2")),
-	"Goodbye\nworld!" = binary_to_list(Content2),
-	{ok,Content3} = file:read_file(filename:join([Tmp_dirname,"testdir","toto"])),
-	"Silly" = binary_to_list(Content3),
-	{ok,Content4} = file:read_file(filename:join([Tmp_dirname,"testdir","testdir2","titi"])),
-	"Very silly" = binary_to_list(Content4),
-	adlib:delete_tree(Tmp_dirname),
-	{error,enoent} = file:read_file_info(Tmp_dirname),
-	pass.
+    Tmp_dirname = adlib:temporary_pathname(),
+    Tree = tree(),
+    adlib:make_tree(Tmp_dirname,Tree),
+    {ok,Content} = file:read_file(filename:join(Tmp_dirname,"test")),
+    "Hello world" = binary_to_list(Content),
+    {ok,Content2} = file:read_file(filename:join(Tmp_dirname,"test2")),
+    "Goodbye\nworld!" = binary_to_list(Content2),
+    {ok,Content3} = file:read_file(filename:join([Tmp_dirname,"testdir","toto"])),
+    "Silly" = binary_to_list(Content3),
+    {ok,Content4} = file:read_file(filename:join([Tmp_dirname,"testdir","testdir2","titi"])),
+    "Very silly" = binary_to_list(Content4),
+    adlib:delete_tree(Tmp_dirname),
+    {error,enoent} = file:read_file_info(Tmp_dirname),
+    pass.
 
+tree_using_test() ->
+    Tmp_dirname = adlib:temporary_pathname(),
+    Tree = tree(),
+    Fun = fun(_Dir,_Tree) -> ok
+	  end,
+    ok = adlib:use_tree(Tmp_dirname,Tree,Fun),
+    {error,enoent} = file:read_file_info(Tmp_dirname),
+
+    ReturnFilesfun = fun(Dir,UsedTree) ->
+			     [ X || {_,X,_} <- UsedTree, filelib:is_file(filename:join(Dir,X))]
+		     end,
+    ["test","test2","testdir"] = adlib:use_tree(Tmp_dirname,Tree,ReturnFilesfun),
+    {error,enoent} = file:read_file_info(Tmp_dirname),
+
+    BoumFun = fun(_Dir,_UsedTree) ->
+		      false = true
+	      end,
+    %{{badmatch,_},_} = adlib:use_tree(Tmp_dirname,Tree,BoumFun),
+    case catch adlib:use_tree(Tmp_dirname,Tree,BoumFun) of
+	{'EXIT',{{badmatch,true},_}} ->
+	    ok
+    end,
+    {error,enoent} = file:read_file_info(Tmp_dirname),
+    ok.
+
+    
 first_test() ->
 	Three = fun(X) -> X == 3 end,
 	{ok, {3,2}} = adlib:first(Three, lists:seq(2,10)),
@@ -93,25 +121,25 @@ guarded_call_sequence_test() ->
 guarded_call_function_blowup_test() ->
 	put(teardown_called,false),
  	ok = case catch adlib:guarded_call(
-					  init,
-					  fun({context,Context}) ->
-							  Context
-					  end,
-					  fun({context,_}) ->
-							  ok = nok
-					  end,
-					  fun({{context,_},{result,_}}) ->
-							  put(teardown_called,with_result);
-						 ({{context,_},noresult}) ->
-							  put(teardown_called,without_result)
-					  end)
-			 of
-			 {'EXIT',{{badmatch,nok},_}} ->
-				 ok;
-			 Other ->
-				 Other
-		 end,
-	without_result = get(teardown_called).
+			  init,
+			  fun({context,Context}) ->
+				  Context
+			  end,
+			  fun({context,_}) ->
+				  ok = nok
+			  end,
+			  fun({{context,_},{result,_}}) ->
+				  put(teardown_called,with_result);
+			     ({{context,_},noresult}) ->
+				  put(teardown_called,without_result)
+			  end)
+		 of
+		 {'EXIT',{{badmatch,nok},_}} ->
+		     ok;
+		 Other ->
+		     Other
+	     end,
+    without_result = get(teardown_called).
 
 unique_test() ->
 	[] = adlib:unique([]),

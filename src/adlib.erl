@@ -27,141 +27,163 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(adlib).
--export([guarded_call/4,make_tree/2,delete_tree/1,temporary_module_name/0,temporary_pathname/0]).
+-export([guarded_call/4,make_tree/2,delete_tree/1,use_tree/3,temporary_module_name/0,temporary_pathname/0]).
 -export([first/2,unique/1,strip_whitespace/1,begins_with/2,begins_with/1,ends_with/2,ends_with/1]).
 
 -include_lib("kernel/include/file.hrl").
 
 guarded_call(Context, Setup, Function, Teardown) ->
-	NewContext = Setup({context,Context}),
-	case catch Function({context,NewContext}) of
-		{'EXIT',Reason} ->
-			Teardown({{context,NewContext},noresult}),
-			throw({'EXIT',Reason});
-		Result ->
-			LastContext = Teardown({{context,NewContext},{result,Result}}),
-			{result,Result,context,LastContext}
-	end.
+    NewContext = Setup({context,Context}),
+    case catch Function({context,NewContext}) of
+	{'EXIT',Reason} ->
+	    Teardown({{context,NewContext},noresult}),
+	    throw({'EXIT',Reason});
+	Result ->
+	    LastContext = Teardown({{context,NewContext},{result,Result}}),
+	    {result,Result,context,LastContext}
+    end.
 
-% 	Teardown(Function({context,Setup(Context)})).
-% 	Build = fun({GuardInit,GuardFinish},{Context,UnwindStack}) ->
-% 					{GuardInit(Context), [GuardFinish|UnwindStack]}
-% 			end,
-% 	{NewContext, UnwindStack} = lists:foldl(Build,{Context,[]},Guards),
-% 	Result = Function(NewContext),
-% 	Destroy = fun(GuardFinish, Context) ->
-% 					  GuardFinish(Context)
-% 			  end,
-% 	LastContext = lists:foldl(Destroy,Context,UnwindStack),
-% 	{Result,LastContext}.
+						% 	Teardown(Function({context,Setup(Context)})).
+						% 	Build = fun({GuardInit,GuardFinish},{Context,UnwindStack}) ->
+						% 					{GuardInit(Context), [GuardFinish|UnwindStack]}
+						% 			end,
+						% 	{NewContext, UnwindStack} = lists:foldl(Build,{Context,[]},Guards),
+						% 	Result = Function(NewContext),
+						% 	Destroy = fun(GuardFinish, Context) ->
+						% 					  GuardFinish(Context)
+						% 			  end,
+						% 	LastContext = lists:foldl(Destroy,Context,UnwindStack),
+						% 	{Result,LastContext}.
 
 first(Pred,List) ->
-	% Looks for first element of List satisfying Pred.
-	% Returns {ok, {Element,Position}} | none
-	first(Pred,List,1).
+						% Looks for first element of List satisfying Pred.
+						% Returns {ok, {Element,Position}} | none
+    first(Pred,List,1).
 
 first(Pred,[H|T],Position) ->
-	case Pred(H) of
-		true ->
-			{ok, {H,Position}};
-		false ->
-			first(Pred,T,Position+1)
-	end;
+    case Pred(H) of
+	true ->
+	    {ok, {H,Position}};
+	false ->
+	    first(Pred,T,Position+1)
+    end;
 first(_,[],_) ->
-	none.
+    none.
 
 
 make_tree(Root,Tree) ->
-	ok = file:make_dir(Root),
-	populate(Root,Tree).
+    ok = file:make_dir(Root),
+    populate(Root,Tree).
 
 delete_tree(Root) ->
-	depopulate(Root),
-	ok = file:del_dir(Root).
+    depopulate(Root),
+    ok = file:del_dir(Root).
+
+ use_tree(Dir,Tree,Fun) ->
+    adlib:make_tree(Dir,Tree),
+    LastCall = case catch Fun(Dir,Tree) of
+		   {'EXIT',Reason} ->
+		       fun() -> exit(Reason) end;
+		   Result ->
+		       fun() -> Result end
+	       end,
+    adlib:delete_tree(Dir),
+    LastCall().
+
+%use_tree(Root,Tree,Fun) ->
+%    adlib:make_tree(Root,Tree),
+%    Result = case catch Fun(Root,Tree) of
+%	{'EXIT',Reason} ->
+%	    Reason;
+%	Result2 ->
+%	    Result2
+%    end,
+%    adlib:delete_tree(Root),
+%    Result.
 
 temporary_pathname() ->
-	Possible_roots = [os:getenv(X) || X <- ["TMP","TEMP","HOME"], os:getenv(X)/=false],
- 	{ok, {Root,_}} = first(
-							fun(X) ->
-									case file:read_file_info(X) of
-										{ok,{file_info,_,directory,read_write,_,_,_,_,_,_,_,_,_,_}} ->
-											true;
-										_Other ->
-											false
-									end
-							end,
-				   Possible_roots),
-	Pathname = filename:join(Root,unique_string()),
-	{error,enoent} = file:read_file_info(Pathname),
-	Pathname.
+    Possible_roots = [os:getenv(X) || X <- ["TMP","TEMP","HOME"], os:getenv(X)/=false],
+    {ok, {Root,_}} = first(
+		       fun(X) ->
+			       case file:read_file_info(X) of
+				   {ok,{file_info,_,directory,read_write,_,_,_,_,_,_,_,_,_,_}} ->
+				       true;
+				   _Other ->
+				       false
+			       end
+		       end,
+		       Possible_roots),
+    Pathname = filename:join(Root,unique_string()),
+    {error,enoent} = file:read_file_info(Pathname),
+    Pathname.
 
 unique_string() ->
-	{Mega,Sec,Micro} = now(),
-	integer_to_list(Mega) ++ "_" ++ integer_to_list(Sec) ++ "_" ++ integer_to_list(Micro).
-	
+    {Mega,Sec,Micro} = now(),
+    integer_to_list(Mega) ++ "_" ++ integer_to_list(Sec) ++ "_" ++ integer_to_list(Micro).
+
 temporary_module_name() ->
-	list_to_atom("tmp_module_" ++ unique_string()).
+    list_to_atom("tmp_module_" ++ unique_string()).
 
 populate(Directory, [{file,Name,Content}|Tail]) ->
-	ok = file:write_file(filename:join(Directory,Name),normalise(Content)),
-	populate(Directory,Tail);
+    ok = file:write_file(filename:join(Directory,Name),normalise(Content)),
+    populate(Directory,Tail);
 populate(Directory, [{directory,Name,Content}|Tail]) ->
-	Pathname = filename:join(Directory,Name),
-	ok = file:make_dir(Pathname),
-	populate(Pathname,Content),
-	populate(Directory,Tail);
+    Pathname = filename:join(Directory,Name),
+    ok = file:make_dir(Pathname),
+    populate(Pathname,Content),
+    populate(Directory,Tail);
 populate(_,[]) ->
-	ok.
+    ok.
 
 normalise([H|[]]) ->
-	H;
+    H;
 normalise([H|T]) when list(H) ->
-	% Inserts newlines when list of strings...
-	normalise([string:concat(H,string:concat("\n",hd(T)))|tl(T)]);
+						% Inserts newlines when list of strings...
+    normalise([string:concat(H,string:concat("\n",hd(T)))|tl(T)]);
 normalise([String]) when list(String) ->
-	String;
+    String;
 normalise(String) when list(String) ->
-	String.
+    String.
 
 depopulate(Directory) ->
-	{ok, Filename_list} = file:list_dir(Directory),
-	Delete = fun(Filename) ->
-					 Pathname = filename:join(Directory,Filename),
-					 {ok,File_info} = file:read_file_info(Pathname),
-					 case File_info#file_info.type of
-						 directory ->
-							 delete_tree(Pathname);
-						 regular ->
-							 ok = file:delete(Pathname)
-					 end
-			 end,
-	lists:foreach(Delete,Filename_list).
+    {ok, Filename_list} = file:list_dir(Directory),
+    Delete = fun(Filename) ->
+		     Pathname = filename:join(Directory,Filename),
+		     {ok,File_info} = file:read_file_info(Pathname),
+		     case File_info#file_info.type of
+			 directory ->
+			     delete_tree(Pathname);
+			 regular ->
+			     ok = file:delete(Pathname)
+		     end
+	     end,
+    lists:foreach(Delete,Filename_list).
 
 
 unique(List) ->
-	lists:reverse(lists:foldl(
-	  fun(X,Acc) ->
-			  Already = lists:member(X,Acc),
-			  if
-				 Already == true ->
-					  Acc;
-				 Already == false ->
-					  [X|Acc]
-			  end
-	  end,
-	  [],
-	  List)).
+    lists:reverse(lists:foldl(
+		    fun(X,Acc) ->
+			    Already = lists:member(X,Acc),
+			    if
+				Already == true ->
+				    Acc;
+				Already == false ->
+				    [X|Acc]
+			    end
+		    end,
+		    [],
+		    List)).
 
 strip_whitespace(String) when list(String) ->
-	lists:filter(
-	  fun($\s) -> false;
-		 ($\n) -> false;
-		 ($\t) -> false;
-		 (Other) when integer(Other) -> true
-	  end,
-	  String).
-		  
-		 
+    lists:filter(
+      fun($\s) -> false;
+	 ($\n) -> false;
+	 ($\t) -> false;
+	 (Other) when integer(Other) -> true
+      end,
+      String).
+
+
 ends_with(String,Ending) ->
     begins_with(lists:reverse(String),lists:reverse(Ending)).
 
@@ -186,7 +208,7 @@ begins_with(Token) ->
 	    begins_with(String,Token)
     end.
 
-%     StringLen = string:len(String),
-%     EndingLen = string:len(Ending),
-%     string:sub_string(String,StringLen-EndingLen+1) == Ending.
+						%     StringLen = string:len(String),
+						%     EndingLen = string:len(Ending),
+						%     string:sub_string(String,StringLen-EndingLen+1) == Ending.
 
