@@ -163,7 +163,8 @@ begins_with_test() ->
 ends_with_test() ->
     true = adlib:ends_with("bla","a"),
     false = adlib:ends_with("hello","yo"),
-    false = adlib:ends_with("yo","longer").
+    false = adlib:ends_with("yo","longer"),
+    true = adlib:ends_with (this_is_an_atom, "tom").
     
 ends_with_fun_test() ->
     Ends_with_suf = adlib:ends_with("_suf"),
