@@ -28,30 +28,57 @@
 
 -module(xpdojo).
 
--export([dashboard/2]).
+-export([dashboard/2,test_files/1]).
 
+test_files (Dir) ->
+      acceptance (unit (compile ( find_modules (Dir)))).
+
+find_modules (Dir) ->
+    Filter_erlang_source = fun ([regular,".erl",Name],Acc) ->
+				 [Name|Acc];
+			     (_,Acc) ->
+				 Acc
+			 end,
+    adlib:fold_files (Dir, Filter_erlang_source, [type, extension, absolute_full_name],[]).
+
+compile (Files) ->
+    lists:foldl (
+      fun (File, {modules, Total, Compiled}) ->
+	      {modules, Total + 1, Compiled + was_successful (compile:file (File))}
+      end,
+      {modules, 0, 0},
+      Files).
+
+was_successful ({ok, _}) ->
+    1;
+was_successful (_) ->
+    0.
+
+unit ({modules,N,M}) ->
+    [{unit,0,0},{modules,N,M}].
+
+acceptance ( Results ) ->
+    [{acceptance,0,0}|Results].
+    
 dashboard( [{files,[]}], _Atom) ->
     empty_project;
-dashboard( [{directory,Name}], _Atom) ->
-    KeepFiles = fun([regular,EntryName],Acc) ->
-			[EntryName|Acc];
-		   (_,Acc) ->
+
+dashboard ([{directory, Dir}], Atom) ->
+    KeepFiles = fun ([regular, File], Acc) ->
+			[File|Acc];
+		    (_, Acc) ->
 			Acc
 		end,
-    Files = adlib:fold_files(Name,KeepFiles,[type,absolute_full_name],[]),
-    case Files of
-	[] ->
-	    empty_project;
-	List when list(List) ->
-	    dashboard([{files,Files}],_Atom)
-    end;
-dashboard( [{files,Files}], _Atom) ->
-    ModuleCompilation = compileModules(Files),
-    
-    checkNotEmpty(ModuleCompilation,
-		  lists:all(fun({_File,non_existent}) -> true;
-			       (_X) ->false
-			    end,ModuleCompilation)).
+    Files = adlib:fold_files (Dir, KeepFiles, [type, absolute_full_name], []),
+    dashboard ([{files, Files}], Atom);
+
+dashboard ([{files, Files}], _Atom) ->
+    ModuleCompilation = compileModules (Files),
+    checkNotEmpty (ModuleCompilation,
+		   lists:all (fun ({_File, non_existent}) -> true;
+				  (_X) -> false
+			      end,
+			      ModuleCompilation)).
 
 compileModules([]) ->
     [];
@@ -74,6 +101,7 @@ checkNotEmpty(Modules,false) ->
 checkCompilation(_,true) ->
     build_failed;
 checkCompilation(Modules,false) ->
+%     unitTestRun(Modules).
     unitTestCompilation(Modules).
 
 unitTestCompilation(Modules) ->

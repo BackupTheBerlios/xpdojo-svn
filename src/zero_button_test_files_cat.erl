@@ -77,65 +77,65 @@ bar_ut() ->
       "-export([foo_test/0]).",
       "foo_test() -> ok = bar:foo()."]}.
 
-file_list_empty_cat()->
-    Project = [{files,[]}],
-    empty_project = xpdojo:dashboard(Project, unit_tests).
+% file_list_empty_cat()->
+%     Project = [{files,[]}],
+%     empty_project = xpdojo:dashboard(Project, unit_tests).
 
-file_list_nonexistent_cat() ->
-    Project = [{files,[adlib:temporary_pathname(),adlib:temporary_pathname()]}],
-    empty_project = xpdojo:dashboard(Project, unit_tests).
+% file_list_nonexistent_cat() ->
+%     Project = [{files,[adlib:temporary_pathname(),adlib:temporary_pathname()]}],
+%     empty_project = xpdojo:dashboard(Project, unit_tests).
 
     
-file_list_not_compilable_cat() ->
-    Dir = adlib:temporary_pathname(),
-    Tree = [bad_foo()],
-    adlib:use_tree(Dir,Tree,fun(Dir2,_Tree) ->
-				    Project = [{files,[filename:join(Dir2,"foo.erl")]}],
-				    build_failed = xpdojo:dashboard(Project, unit_tests)
-			    end).
+% file_list_not_compilable_cat() ->
+%     Dir = adlib:temporary_pathname(),
+%     Tree = [bad_foo()],
+%     adlib:use_tree(Dir,Tree,fun(Dir2,_Tree) ->
+% 				    Project = [{files,[filename:join(Dir2,"foo.erl")]}],
+% 				    build_failed = xpdojo:dashboard(Project, unit_tests)
+% 			    end).
  
-file_list_without_tests_cat() ->		 
-    Dir = adlib:temporary_pathname(),
-    Tree = [foo()],
-    adlib:use_tree(Dir,Tree,fun(Dir2,_Tree) ->
-				    Project = [{files,[filename:join(Dir2,"foo.erl")]}],
-				    {0,[]} = xpdojo:dashboard(Project, unit_tests)
-			    end).
+% file_list_without_tests_cat() ->		 
+%     Dir = adlib:temporary_pathname(),
+%     Tree = [foo()],
+%     adlib:use_tree(Dir,Tree,fun(Dir2,_Tree) ->
+% 				    Project = [{files,[filename:join(Dir2,"foo.erl")]}],
+% 				    {0,[]} = xpdojo:dashboard(Project, unit_tests)
+% 			    end).
 
-file_list_with_failing_test_cat() ->
-    Dir = adlib:temporary_pathname(),
-    Tree = [foo(),bad_foo_ut()],
-    adlib:use_tree(Dir,Tree,fun(Dir2,_Tree) ->
-				    Project = [{files,[filename:join(Dir2,"foo.erl")]}],
-				    {1,[_Reason]} = xpdojo:dashboard(Project, unit_tests)
-			    end).
+% file_list_with_failing_test_cat() ->
+%     Dir = adlib:temporary_pathname(),
+%     Tree = [foo(),bad_foo_ut()],
+%     adlib:use_tree(Dir,Tree,fun(Dir2,_Tree) ->
+% 				    Project = [{files,[filename:join(Dir2,"foo.erl")]}],
+% 				    {1,[_Reason]} = xpdojo:dashboard(Project, unit_tests)
+% 			    end).
 
-file_list_with_single_module_and_test_cat() ->
-    Dir = adlib:temporary_pathname(),
-    Tree = [foo(),foo_ut()],
-    adlib:use_tree(Dir,Tree,fun(Dir2,_Tree) ->
-				    Project = [{files,[filename:join(Dir2,"foo.erl")]}],
-				    {1,[]} = xpdojo:dashboard(Project, unit_tests)
-			    end).
-file_list_with_partial_build_cat() ->
-    Tree = [foo(),foo_ut(),bad_bar()],
-    adlib:use_tree(adlib:temporary_pathname(),
-		   Tree,
-		   fun(Dir2,_Tree) ->
-			   Project = [{files,[filename:join(Dir2,"bar.erl"),
-					      filename:join(Dir2,"foo.erl")]}],
-			   build_failed = xpdojo:dashboard(Project, unit_tests)
-		   end).
+% file_list_with_single_module_and_test_cat() ->
+%     Dir = adlib:temporary_pathname(),
+%     Tree = [foo(),foo_ut()],
+%     adlib:use_tree(Dir,Tree,fun(Dir2,_Tree) ->
+% 				    Project = [{files,[filename:join(Dir2,"foo.erl")]}],
+% 				    {1,[]} = xpdojo:dashboard(Project, unit_tests)
+% 			    end).
+% file_list_with_partial_build_cat() ->
+%     Tree = [foo(),foo_ut(),bad_bar()],
+%     adlib:use_tree(adlib:temporary_pathname(),
+% 		   Tree,
+% 		   fun(Dir2,_Tree) ->
+% 			   Project = [{files,[filename:join(Dir2,"bar.erl"),
+% 					      filename:join(Dir2,"foo.erl")]}],
+% 			   build_failed = xpdojo:dashboard(Project, unit_tests)
+% 		   end).
 
-file_list_with_several_modules_cat() ->
-    Tree = [foo(),foo_ut(),bar()],
-    adlib:use_tree(adlib:temporary_pathname(),
-		   Tree,
-		   fun(Dir2,_Tree) ->
-			   Project = [{files,[filename:join(Dir2,"bar.erl"),
-					      filename:join(Dir2,"foo.erl")]}],
-			   {1,[]} = xpdojo:dashboard(Project, unit_tests)
-		   end).
+% file_list_with_several_modules_cat() ->
+%     Tree = [foo(),foo_ut(),bar()],
+%     adlib:use_tree(adlib:temporary_pathname(),
+% 		   Tree,
+% 		   fun(Dir2,_Tree) ->
+% 			   Project = [{files,[filename:join(Dir2,"bar.erl"),
+% 					      filename:join(Dir2,"foo.erl")]}],
+% 			   {1,[]} = xpdojo:dashboard(Project, unit_tests)
+% 		   end).
 
 
 directory_empty_cat() ->

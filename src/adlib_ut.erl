@@ -241,3 +241,4 @@ fold_files_pick_erlang_source_absolute_with_subdirectory_test() ->
 			   Expected = adlib:fold_files(Root2,Action,[type,extension,absolute_full_name],[bla])
 		   end).
     
+    

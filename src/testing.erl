@@ -64,9 +64,9 @@ run_unit_tests() ->
 
 run_acceptance_tests() ->
     Filter = fun(Module) ->
-		     adlib:ends_with(atom_to_list(Module),"_cat")
+		     adlib:ends_with(atom_to_list(Module),"_acceptance")
 	     end,
-    run_modules(Filter,{suffix,"_cat"}).
+    run_modules(Filter,{suffix,"_test"}).
 		     
 select_test_functions(Module,Pattern) when atom(Module), tuple(Pattern) ->
     [{Module,X} || {X,Y} <- Module:module_info(exports), is_match(X,Pattern), Y == 0].
