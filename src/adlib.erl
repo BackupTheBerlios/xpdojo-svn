@@ -136,20 +136,19 @@ depopulate(Directory) ->
 	     end,
     lists:foreach(Delete,Filename_list).
 
-
 unique(List) ->
-    lists:reverse(lists:foldl(
-		    fun(X,Acc) ->
-			    Already = lists:member(X,Acc),
-			    if
-				Already == true ->
-				    Acc;
-				Already == false ->
-				    [X|Acc]
-			    end
-		    end,
-		    [],
-		    List)).
+    lists:reverse(
+      lists:foldl(
+        fun(X,Acc) ->
+                accumulate_unless(lists:member(X,Acc),X,Acc)
+        end,
+        [],
+        List)).
+
+accumulate_unless(true, _X, Acc) ->
+    Acc;
+accumulate_unless(false, X, Acc) ->
+    [X|Acc].
 
 strip_whitespace(String) when list(String) ->
     lists:filter(
