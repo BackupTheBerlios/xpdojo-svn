@@ -41,3 +41,13 @@ erlang_files_test () ->
 	      Expected = source:erlang_files(Dir)
       end).
     
+module_test() ->
+    Expected =
+	"-module (my_module).\n"
+	"-export ([foo/0]).\n"
+	"foo () ->\n"
+	"  ok.\n",
+    Expected = source:module (my_module, [foo]).
+
+lines_test() ->
+    "Toto\nTiti\nTata\n" = source:lines (["Toto", "Titi", "Tata"]).

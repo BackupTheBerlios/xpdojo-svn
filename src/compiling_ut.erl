@@ -74,3 +74,12 @@ differences_test() ->
     [{modified, ["/tmp/toto.erl"]}] =
 	compiling:differences ([toto], ["/tmp/toto.erl"], fun (_Module, _File) -> true end),
     ok.
+
+compile_nothing_test() ->
+    {{compiled, []}, {failed, []}} = compiling:compile ("my_dir", []).
+
+% compile_test() ->
+%     use_and_purge_tree (
+%       [, "src", [bar(), ]},
+%        {directory, "build", []}],
+      
