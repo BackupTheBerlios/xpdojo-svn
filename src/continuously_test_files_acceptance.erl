@@ -121,6 +121,13 @@ multi_module_test() ->
 			    [{acceptance,0,0}, {unit,0,0}, {modules,3,2}] = xpdojo:test_files (Dir)
 		    end).
 
+single_module_with_unit_test() ->
+    adlib:use_tree (adlib:temporary_pathname(),
+		    [foo(), foo_ut()],
+		    fun (Dir,_) ->
+			    [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir)
+		    end).
+    
 %     Dir = adlib:temporary_pathname(),
 %     Project = [{directory, Dir}],
 %     Tree = [foo(),foo_ut(),bar()],

@@ -159,7 +159,8 @@ strip_whitespace(String) when list(String) ->
       end,
       String).
 
-
+ends_with(Atom, Ending) when atom(Atom) ->
+    ends_with (atom_to_list(Atom), Ending);
 ends_with(String,Ending) ->
     begins_with(lists:reverse(String),lists:reverse(Ending)).
 

@@ -43,19 +43,21 @@ find_modules (Dir) ->
 
 compile (Files) ->
     lists:foldl (
-      fun (File, {modules, Total, Compiled}) ->
-	      {modules, Total + 1, Compiled + was_successful (compile:file (File))}
+      fun (File, {Total, Modules}) ->
+	      {Total + 1, accumulate_if_succeeded (compile:file (File), Modules)}
       end,
-      {modules, 0, 0},
+      {0, []},
       Files).
 
-was_successful ({ok, _}) ->
-    1;
-was_successful (_) ->
-    0.
+accumulate_if_succeeded ({ok, Module}, Acc) ->
+    [Module|Acc];
+accumulate_if_succeeded (_, Acc) ->
+    Acc.
 
-unit ({modules,N,M}) ->
-    [{unit,0,0},{modules,N,M}].
+unit ({Total_module_count, Compiled_modules}) ->
+    Unit_tests = [X || X <- Compiled_modules, adlib:ends_with(X,"_ut")],
+    {Total,Failures} = testing:run_modules (Unit_tests, {suffix, "_test"}),
+    [{unit,Total,Total-length(Failures)}, {modules,Total_module_count,length(Compiled_modules)}].
 
 acceptance ( Results ) ->
     [{acceptance,0,0}|Results].
