@@ -37,30 +37,39 @@ default_options() ->
 test_files (Directory) ->
     test_files(Directory, default_options()).
 
-test_files(Directory, [{unit_modules_filter,Unit_modules_filter},
-		 {unit_functions_filter,Unit_functions_filter}]) ->
-    Unit = unit (Unit_modules_filter, Unit_functions_filter),
-    Continuation = fun(Dir, Files) ->
-			   Continuation2 = fun(Files2) -> acceptance (Unit (compile (Files2))) end,
-			   detect_modules (Dir, Files, Continuation2)
-		   end,
-    find_modules (Directory, Continuation).
+test_files(Directory, Options) ->
+    Unit = unit (Options),
+    with (Directory,
+	  [fun find_modules/2,
+	   fun find_differences/2,
+	   fun (_Dir2, Files) -> acceptance(Unit(compile(Files))) end],
+	  []).
 
-find_modules (Directory, Continuation) ->
-    continue_find (source:erlang_files (Directory), Directory, Continuation).
+with (Directory, [Fun|T], Acc) ->
+    case Fun (Directory, Acc) of
+	{stop, Result} ->
+	    Result;
+	New_acc ->
+	    with (Directory, T, New_acc)
+    end;
+with (_Directory, [], Acc) ->
+    Acc.
 
-continue_find ([], _, _) ->
-    no_source_files;
-continue_find (Files, Directory, Continuation) ->
-    Continuation (Directory, Files).
-
-detect_modules (Directory, Files, Continuation) ->
-    Differences = compiling:differences (compiling:loaded_modules (Directory), Files),
-    case Differences of
+find_modules (Directory, _) ->
+    case source:erlang_files (Directory) of
 	[] ->
-	    unchanged;
-	_ ->
-	    Continuation (Files)
+	    {stop, no_source_files};
+	Files ->
+	    Files
+    end.
+
+find_differences (Directory, Files) ->
+    Loaded_modules = compiling:loaded_modules (Directory),
+    case compiling:differences (Loaded_modules, Files) of
+	[] ->
+	    {stop, unchanged};
+	_Changes ->
+	    Files
     end.
 
 compile (Files) ->
@@ -77,6 +86,11 @@ load_and_accumulate_if_succeeded ({ok, Module}, Acc) ->
     [Module|Acc];
 load_and_accumulate_if_succeeded (_, Acc) ->
     Acc.
+
+unit (Options) ->
+    {value, {_,  Module_filter}} = lists:keysearch (unit_modules_filter, 1, Options),
+    {value, {_,  Function_filter}} = lists:keysearch (unit_functions_filter, 1, Options),
+    unit (Module_filter, Function_filter).
 
 unit (Mod_filter, Fun_filter) ->
     fun({Total_module_count, Compiled_modules}) when length(Compiled_modules) < Total_module_count; Total_module_count == 0 ->

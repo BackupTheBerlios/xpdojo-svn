@@ -3,14 +3,13 @@ FOR FIRST RELEASE
 
 Continuous file testing:
 
-- unchanged
 - removed file
-- provide a relative path.
+- provide a relative path (warning: 'unchanged' doesn't work with this yet).
 - optional location for .beam files
 - optional report function
 - optional compile options
 - continuous server
-- conflicts and auto(dojo)-development?
+- conflicts and auto(dojo)-development
 - Look why some module don't have source code %    unknown = compiling:source_of_module (prim_file),
 
 General:
