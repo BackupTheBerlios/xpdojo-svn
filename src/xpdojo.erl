@@ -44,25 +44,25 @@ test_files(Dir, [{unit_modules_filter,Unit_modules_filter},
 
 find_modules (Dir) ->
     Filter_erlang_source = fun ([regular,".erl",Name],Acc) ->
-				 [Name|Acc];
-			     (_,Acc) ->
-				 Acc
-			 end,
+				   [Name|Acc];
+			       (_,Acc) ->
+				   Acc
+			   end,
     adlib:fold_files (Dir, Filter_erlang_source, [type, extension, absolute_full_name],[]).
 
 compile (Files) ->
     lists:foldl (
       fun (File, {Total, Modules}) ->
-	      {Total + 1, accumulate_if_succeeded (compile:file (File), Modules)}
+	      {Total + 1, load_and_accumulate_if_succeeded (compile:file (File), Modules)}
       end,
       {0, []},
       Files).
 
-accumulate_if_succeeded ({ok, Module}, Acc) ->
+load_and_accumulate_if_succeeded ({ok, Module}, Acc) ->
     code:purge(Module),
     {module, Module} = code:load_file(Module),
     [Module|Acc];
-accumulate_if_succeeded (_, Acc) ->
+load_and_accumulate_if_succeeded (_, Acc) ->
     Acc.
 
 unit (Mod_filter, Fun_filter) ->

@@ -146,7 +146,7 @@ failing_build_bails_out_test() ->
 foo_more_utt() ->
     {file,"foo_more_utt.erl",
      ["-module(foo_more_utt).",
-      "-export([bar_t/0,bar_tt/0,bar2_tt/0]).",
+      "-export([bar_t/0,bar_t/1,bar_tt/0,bar2_tt/0]).",
       "bar_t() -> ok = foo:bar().",
       "bar_t(X) -> X = foo:bar().",
       "bar_tt() -> ok = foo:bar().",
@@ -193,45 +193,26 @@ reload_changed_file_test() ->
 					    "foo_test() -> nok = foo:bar()."),
 			    [{unit,1,0}, {modules,2,2}] = xpdojo:test_files (Dir)
 		    end).
-%     adlib:use_tree (adlib:temporary_pathname(),
-% 		    [foo(), bad_foo_ut()],
-% 		    fun (Dir,_) ->
-% 			    [{unit,1,0}, {modules,2,2}] = xpdojo:test_files (Dir),
-% 			    file:write_file(filename:join(Dir,"foo_ut.erl"),
-% 					    "-module(foo_ut).\n"
-% 					    "-export([foo_test/0]).\n"
-% 					    "foo_test() -> ok = foo:bar()."),
-% 			    [{unit,1,0}, {modules,2,2}] = xpdojo:test_files (Dir)
-% 		    end).
-    
-%     Dir = adlib:temporary_pathname(),
-%     Project = [{directory, Dir}],
-%     Tree = [foo(),foo_ut(),bar()],
-%     adlib:use_tree(Dir,
-% 		   Tree,
-% 		   fun(_,_) ->
-% 			   {1,[]} = xpdojo:test (Project)
-% 		   end).
 
-% add_module_to_directory_cat() ->
-%     Dir = adlib:temporary_pathname(),
-%     Tree = [foo(),foo_ut(),bar()],
-%     adlib:use_tree(Dir,
-% 		   Tree,
-% 		   fun(Dir2,_Tree) ->
-% 			   {1,[]} = xpdojo:dashboard([{directory,Dir2}], unit_tests),
-% 			   file:write_file(filename:join(Dir,"bar_ut.erl"),
-% 					   "-module(bar_ut).\n"
-% 					   "-export([foo_test/0]).\n"
-% 					   "foo_test() -> nok = bar:foo()."),
-% 			   {2,[{{badmatch,ok},_Stack}]} = xpdojo:dashboard([{directory,Dir2}], unit_tests),
-% 			   file:write_file(filename:join(Dir,"bar_ut.erl"),
-% 					   "-module(bar_ut).\n"
-% 					   "-export([foo_test/0]).\n"
-% 					   "foo_test() -> ok = bar:foo()."),
-% 			   {2,[]} = xpdojo:dashboard([{directory,Dir2}], unit_tests)
-% 		   end).
-    
+add_module_to_directory_test() ->
+    adlib:use_tree (adlib:temporary_pathname(),
+		    [foo(), foo_ut()],
+		    fun (Dir,_) ->
+			    [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir),
+			    file:write_file(filename:join(Dir,"bar.erl"),
+					    "-module(bar).\n"
+					    "-export([foo/0]).\n"
+					    "foo() -> yohoho."),
+			    [{acceptance,0,0}, {unit,1,1}, {modules,3,3}] = xpdojo:test_files (Dir)
+		    end).
 
-    
+unchanged_test() ->
+    adlib:use_tree (adlib:temporary_pathname(),
+		    [foo_acceptance(),
+		    {directory,"src",[foo(),bar()]},
+		    {directory,"unit",[foo_ut(), bar_ut()]}],
+		    fun (Dir,_) ->
+			    [{acceptance,1,0}, {unit,2,2}, {modules,5,5}] = xpdojo:test_files (Dir),
+			    [unchanged] = xpdojo:test_files (Dir)
+		    end).
     
