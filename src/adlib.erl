@@ -27,7 +27,7 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(adlib).
--export([guarded_call/4,make_tree/2,delete_tree/1,use_tree/3,temporary_module_name/0,temporary_pathname/0,fold_files/4]).
+-export([guarded_call/4,make_tree/2,delete_tree/1,use_tree/3,temporary_module_name/0,temporary_pathname/0,fold_files/2,fold_files/4]).
 -export([first/2,unique/1,strip_whitespace/1,begins_with/2,begins_with/1,ends_with/2,ends_with/1]).
 
 -include_lib("kernel/include/file.hrl").
@@ -201,10 +201,44 @@ begins_with(Token) ->
 						%     EndingLen = string:len(Ending),
 						%     string:sub_string(String,StringLen-EndingLen+1) == Ending.
 
+
+fold_files(Root,Filter) ->
+    {ok, DirectoryContent} = file:list_dir(Root),
+    IsFile = fun(directory,_Item) -> 
+		     false;
+		(_,Item) ->
+		     Filter(file,Item)
+	     end,
+    IsDir = fun(directory) -> 
+		    true;
+	       (_) ->
+		    false
+	    end,
+    Files = lists:filter(fun(A) -> 
+				 {ok,Info} = file:read_file_info(filename:join(Root,A)),
+				 Type = Info#file_info.type,
+				 IsFile(Type,A)
+			 end,
+			 DirectoryContent),
+    
+    TransformedFiles = [{Root,filename:basename(X,filename:extension(filename:join(Root,X))),filename:extension(filename:join(Root,X))} ||
+			   X <- Files],
+    
+    Dirs =  lists:filter(fun(A) -> 
+				 {ok,Info} = file:read_file_info(filename:join(Root,A)),
+				 Type = Info#file_info.type,
+				 IsDir(Type)
+			 end,
+			 DirectoryContent),
+    SubFiles = lists:map(fun(X) ->fold_files(filename:join(Root,X),Filter) end,Dirs),
+    AllFiles = lists:flatten([TransformedFiles|SubFiles]),
+    lists:filter(fun([]) ->
+			 false;
+		    (_) ->
+			 true
+		 end,AllFiles).
+
 fold_files(Root,Filter,Action,Acc) ->
-%    [{Root,"toto","abc"},
-%     {filename:join(Root,"Dir1"),"titi",""},
-%     {filename:join(Root,"Dir1"),"tata","defg"}].
 
     {ok, DirectoryContent} = file:list_dir(Root),
     {NewAcc,_Directories} = lists:foldl(fun(Item,{MainAcc,Directories}) ->

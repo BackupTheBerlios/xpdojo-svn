@@ -176,6 +176,56 @@ begins_with_fun_test() ->
     Begins_with_bla = adlib:begins_with("bla"),
     true = Begins_with_bla("blarhubarb").
     
+simple_fold_files_test () ->
+    Filter = fun(file,_Name) ->
+		     true;
+		(_,_) ->
+		     false
+	     end,
+    adlib:use_tree(adlib:temporary_pathname(),
+ 		   [{file,"toto.abc",[]}],
+ 		   fun(Root,_Tree) ->
+ 			   Expected = [{Root,"toto",".abc"}],
+ 			   Expected = adlib:fold_files(Root,Filter)
+ 		   end),
+    
+    adlib:use_tree(adlib:temporary_pathname(),
+ 		   [{file,"toto.abc",[]},
+ 		    {directory,"Dir1",[]}],
+ 		   fun(Root,_Tree) ->
+ 			   Expected = [{Root,"toto",".abc"}],
+ 			   Expected = adlib:fold_files(Root,Filter)
+ 		   end),
+    
+    adlib:use_tree(adlib:temporary_pathname(),
+ 		   [{file,"toto.abc",[]},
+ 		    {directory,"Dir1",[{file,"toto2.abc",[]}]}],
+ 		   fun(Root,_Tree) ->
+ 			   Expected = [{Root,"toto",".abc"},{filename:join(Root,"Dir1"),"toto2",".abc"}],
+ 			   Expected = adlib:fold_files(Root,Filter)
+ 		   end),
+    TxtFun = fun(".txt") ->
+		     true;
+		(_) ->
+		     false
+	     end,
+
+    FilterOnTxt = fun(file,Name) ->
+			  TxtFun(filename:extension(Name));
+		     (_,_) ->
+			  false
+		  end,
+		  
+    adlib:use_tree(adlib:temporary_pathname(),
+ 		   [{file,"toto.abc",[]},
+ 		    {directory,"Dir1",[{file,"toto2.txt",[]}]}],
+ 		   fun(Root,_Tree) ->
+ 			   Expected = [{filename:join(Root,"Dir1"),"toto2",".txt"}],
+ 			   Expected = adlib:fold_files(Root,FilterOnTxt)
+ 		   end).
+
+
+    
 fold_files_test() ->
     Filter = fun(file,_Name) ->
 		     true;
