@@ -56,21 +56,21 @@ no_tests_cat() ->
 	      "bar() -> ok."]}],
     adlib:make_tree(Dir,Tree),
     Project = [{files,[filename:join(Dir,"foo.erl")]}],
-    [0,[]] = xpdojo:dashboard(Project, unit_tests),
+    {0,[]} = xpdojo:dashboard(Project, unit_tests),
     adlib:delete_tree(Dir).
-    
+
 single_module_cat() ->
     Dir = adlib:temporary_pathname(),
     Tree = [{file,"foo.erl",
 	     ["-module(foo).",
 	      "-export([bar/0]).",
-	      "baar() -> ok."]},
+	      "bar() -> ok."]},
 	    {file,"foo_ut.erl",
 	     ["-module(foo_ut).",
 	      "-export([bar_test/0]).",
 	      "bar_test() -> nok = foo:bar()."]}],
     adlib:make_tree(Dir,Tree),
     Project = [{files,[filename:join(Dir,"foo.erl")]}],
-    [1,[_Reason]] = xpdojo:dashboard(Project, unit_tests),
+    {1,[_Reason]} = xpdojo:dashboard(Project, unit_tests),
     adlib:delete_tree(Dir).
 
