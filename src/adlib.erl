@@ -27,8 +27,8 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(adlib).
--export([guarded_call/4,make_tree/2,delete_tree/1,use_tree/3,temporary_module_name/0,temporary_pathname/0,fold_files/2,fold_files/4]).
--export([first/2,unique/1,strip_whitespace/1,begins_with/2,begins_with/1,ends_with/2,ends_with/1]).
+-export([guarded_call/4,make_tree/2,delete_tree/1,use_tree/3,temporary_module_name/0,temporary_pathname/0]).
+-export([first/2,unique/1,strip_whitespace/1,begins_with/2,begins_with/1,ends_with/2,ends_with/1,fold_files/4]).
 
 -include_lib("kernel/include/file.hrl").
 
@@ -42,18 +42,6 @@ guarded_call(Context, Setup, Function, Teardown) ->
 	    LastContext = Teardown({{context,NewContext},{result,Result}}),
 	    {result,Result,context,LastContext}
     end.
-
-						% 	Teardown(Function({context,Setup(Context)})).
-						% 	Build = fun({GuardInit,GuardFinish},{Context,UnwindStack}) ->
-						% 					{GuardInit(Context), [GuardFinish|UnwindStack]}
-						% 			end,
-						% 	{NewContext, UnwindStack} = lists:foldl(Build,{Context,[]},Guards),
-						% 	Result = Function(NewContext),
-						% 	Destroy = fun(GuardFinish, Context) ->
-						% 					  GuardFinish(Context)
-						% 			  end,
-						% 	LastContext = lists:foldl(Destroy,Context,UnwindStack),
-						% 	{Result,LastContext}.
 
 first(Pred,List) ->
 						% Looks for first element of List satisfying Pred.
@@ -197,77 +185,23 @@ begins_with(Token) ->
 	    begins_with(String,Token)
     end.
 
-						%     StringLen = string:len(String),
-						%     EndingLen = string:len(Ending),
-						%     string:sub_string(String,StringLen-EndingLen+1) == Ending.
+fold_files(Root,Action,Options,Acc) when list(Root) ->
+    {ok,Content} = file:list_dir(Root),
+    lists:foldl(fun(Item,Acc2) ->
+			  fold_files(Root,Item,Options,Action,Acc2)
+		end,
+		Acc,
+		Content).
 
+fold_files(Root,Item,Options,Action,Acc) ->
+    Action(xray(Root,Item,Options,[]),Acc).
 
-fold_files(Root,Filter) ->
-    {ok, DirectoryContent} = file:list_dir(Root),
-    IsFile = fun(directory,_Item) -> 
-		     false;
-		(_,Item) ->
-		     Filter(file,Item)
-	     end,
-    IsDir = fun(directory) -> 
-		    true;
-	       (_) ->
-		    false
-	    end,
-    Files = lists:filter(fun(A) -> 
-				 {ok,Info} = file:read_file_info(filename:join(Root,A)),
-				 Type = Info#file_info.type,
-				 IsFile(Type,A)
-			 end,
-			 DirectoryContent),
+xray(Root,Item,[type|T],Acc) ->
+    {ok,File_info} = file:read_file_info(filename:join(Root,Item)),
+    xray(Root,Item,T,[File_info#file_info.type|Acc]);
+xray(Root,Item,[relative_full_name|T],Acc) ->
+    xray(Root,Item,T,[Item|Acc]);
+xray(_,_,[],Acc) ->
+    lists:reverse(Acc).
     
-    TransformedFiles = [{Root,filename:basename(X,filename:extension(filename:join(Root,X))),filename:extension(filename:join(Root,X))} ||
-			   X <- Files],
     
-    Dirs =  lists:filter(fun(A) -> 
-				 {ok,Info} = file:read_file_info(filename:join(Root,A)),
-				 Type = Info#file_info.type,
-				 IsDir(Type)
-			 end,
-			 DirectoryContent),
-    SubFiles = lists:map(fun(X) ->fold_files(filename:join(Root,X),Filter) end,Dirs),
-    AllFiles = lists:flatten([TransformedFiles|SubFiles]),
-    lists:filter(fun([]) ->
-			 false;
-		    (_) ->
-			 true
-		 end,AllFiles).
-
-fold_files(Root,Filter,Action,Acc) ->
-
-    {ok, DirectoryContent} = file:list_dir(Root),
-    {NewAcc,_Directories} = lists:foldl(fun(Item,{MainAcc,Directories}) ->
-						{ok,File_info} = file:read_file_info(filename:join(Root,Item)),
-						HandleDirectory = fun() ->
-									  {MainAcc,[Item|Directories]}
-								  end,
-						HandleRegular = fun() ->
-									Temp = fun(Acc2) ->
-										       Extension = filename:extension(Item),
-										       Name = filename:basename(Item,Extension),
-										       Action(file,Root,Name,Extension,Acc2)
-									       end,
-									{call_if(Filter(file,Item),Temp,MainAcc),Directories}
-								end,
-						case File_info#file_info.type of
-						  directory ->
-							HandleDirectory();
-						  regular ->
-							HandleRegular()
-						end
-					end,
-					{Acc,[]},
-					DirectoryContent
-				       ),
-    NewAcc.	       
-
-
-call_if(true,Fun,Acc) ->
-    Fun(Acc);
-call_if(_, _, Acc) ->
-    Acc.

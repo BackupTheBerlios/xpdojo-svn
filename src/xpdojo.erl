@@ -25,6 +25,7 @@
 %%% STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 %%% IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 %%% POSSIBILITY OF SUCH DAMAGE.
+
 -module(xpdojo).
 
 -export([dashboard/2]).
@@ -32,10 +33,16 @@
 dashboard( [{files,[]}], _Atom) ->
     empty_project;
 dashboard( [{directory,Name}], _Atom) ->
-    case file:list_dir(Name) of
-	{ok, []} ->
+    KeepFiles = fun([regular,EntryName],Acc) ->
+			[EntryName|Acc];
+		   (_,Acc) ->
+			Acc
+		end,
+    Files = adlib:fold_files(Name,KeepFiles,[type,relative_full_name],[]),
+    case Files of
+	[] ->
 	    empty_project;
-	{ok, _List} ->
+	List when list(List) ->
 	    {0,[]}
     end;
 dashboard( [{files,Files}], _Atom) ->
@@ -95,22 +102,6 @@ unitTestRun(Modules) ->
     UnitTestModules = lists:foldl(Fun,[],Modules),
     Result = testing:run_modules(UnitTestModules,{suffix,"_test"}),
     Result.
-
-%unitTestRun([{_File,
-%	      {module,
-%	       Module,Binary
-%	      },
-%	      {unit_test,
-%	       {compiled,
-%		UnitTestModule,
-%		UnitTestBinary
-%	       }
-%	      }
-%	     }]) ->
-%    load_module_in_memory(Module,Binary),
-%    load_module_in_memory(UnitTestModule,UnitTestBinary),
-%    testing:run_modules([UnitTestModule],{suffix,"_test"}).
-
 
 transform_compilation_result({error,[{_,[{none,compile,{epp,enoent}}]}],_}) ->
     non_existent;
