@@ -42,7 +42,9 @@ test_files(Directory, Options) ->
     with (Directory,
 	  [fun find_modules/2,
 	   fun find_differences/2,
-	   fun (_Dir2, Files) -> acceptance(Unit(compile(Files))) end],
+	   fun(Dir, Files) -> compiling:compile(Dir, Files) end,
+	   fun post_compile/2,
+	   fun (_Dir2, Modules) -> acceptance(Unit(Modules)) end],
 	  []).
 
 with (Directory, [Fun|T], Acc) ->
@@ -54,6 +56,21 @@ with (Directory, [Fun|T], Acc) ->
     end;
 with (_Directory, [], Acc) ->
     Acc.
+
+post_compile (_Directory, {{compiled, Compiled}, {failed, Failed}}) ->
+    lists:foreach (
+      fun(Module) ->
+	      code:purge(Module),
+	      {module, Module} = code:load_file(Module)
+      end,
+      Compiled),
+    lists:foreach (
+      fun(Module) ->
+	      code:purge(Module),
+	      code:delete(Module)
+      end,
+      Failed),
+    {length(Compiled) + length(Failed), Compiled}.
 
 find_modules (Directory, _) ->
     case source:erlang_files (Directory) of
@@ -71,21 +88,6 @@ find_differences (Directory, Files) ->
 	_Changes ->
 	    Files
     end.
-
-compile (Files) ->
-    lists:foldl (
-      fun (File, {Total, Modules}) ->
-	      {Total + 1, load_and_accumulate_if_succeeded (compile:file (File), Modules)}
-      end,
-      {0, []},
-      Files).
-
-load_and_accumulate_if_succeeded ({ok, Module}, Acc) ->
-    code:purge(Module),
-    {module, Module} = code:load_file(Module),
-    [Module|Acc];
-load_and_accumulate_if_succeeded (_, Acc) ->
-    Acc.
 
 unit (Options) ->
     {value, {_,  Module_filter}} = lists:keysearch (unit_modules_filter, 1, Options),

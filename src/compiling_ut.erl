@@ -92,3 +92,10 @@ compile_one_bad_file_test() ->
 	      {{compiled, []}, {failed, [foo]}} = compiling:compile (Dir, [filename:join (Dir, "foo.erl")])
       end).
 
+compile_all_kind_test() ->
+    use_and_purge_tree (
+      [{file, "foo.erl", source:module(foo,[bar])},{file, "bad_foo.erl", "-module(bad_foo).\nbla() -."},{file, "other_bad_foo.erl", "-module(other_bad_foo).\nbla() -."}],
+      fun (Dir,_) ->
+	      {{compiled, [foo]}, {failed, [other_bad_foo,bad_foo]}} = compiling:compile (Dir, [filename:join (Dir, X ) || X <- ["foo.erl","bad_foo.erl","other_bad_foo.erl"]])
+      end).
+    

@@ -118,7 +118,7 @@ compile (_Dir, [], {Compiled, Failed}) ->
 compile (Dir, [File|T], Acc) ->
     compile (Dir, T, classify_by_result (compile:file(File), File, Acc)).
 
-classify_by_result ({ok, Module}, File, {Compiled, Failed}) ->
+classify_by_result ({ok, Module}, _File, {Compiled, Failed}) ->
     {[Module|Compiled], Failed};
 classify_by_result (error, File, {Compiled, Failed}) ->
     {Compiled, [module_name (File) | Failed]}.
