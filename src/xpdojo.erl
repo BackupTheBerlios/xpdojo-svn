@@ -83,5 +83,11 @@ acceptance ([{unit, UnitTotal, UnitSuccesses}, {modules, Module_total, Compiled_
 test_pass (Module_filter, Function_filter, Modules, PassName, Acc) ->
     Tests = [X || X <- Modules, Module_filter(X)],
     {Total,Failures} = testing:run_modules (Tests, Function_filter),
+    report(Failures),
     [{PassName, Total, Total- length (Failures)} | Acc ].
     
+report([]) ->
+    ok;
+report([H|T]) ->
+    io:fwrite("~p~n",[H]),
+    report(T).

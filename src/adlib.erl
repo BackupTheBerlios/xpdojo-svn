@@ -27,38 +27,27 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(adlib).
--export([guarded_call/4,make_tree/2,delete_tree/1,use_tree/3,temporary_module_name/0,temporary_pathname/0]).
--export([first/2,unique/1,strip_whitespace/1,begins_with/2,begins_with/1,ends_with/2,ends_with/1,fold_files/4]).
--export([accumulate_if/3, is_below_directory/2]).
+-export ([temporary_module_name/0, temporary_pathname/0]).
+-export([make_tree/2, delete_tree/1, use_tree/3, use_tree/4]).
+-export([first/2, unique/1]).
+-export([strip_whitespace/1, begins_with/2, begins_with/1, ends_with/2, ends_with/1]).
+-export([fold_files/4]).
+-export([accumulate_if/3, accumulate_unless/3, is_below_directory/2]).
 
 -include_lib("kernel/include/file.hrl").
 
-guarded_call(Context, Setup, Function, Teardown) ->
-    NewContext = Setup({context,Context}),
-    case catch Function({context,NewContext}) of
-	{'EXIT',Reason} ->
-	    Teardown({{context,NewContext},noresult}),
-	    throw({'EXIT',Reason});
-	Result ->
-	    LastContext = Teardown({{context,NewContext},{result,Result}}),
-	    {result,Result,context,LastContext}
-    end.
+first (Predicate, List) ->
+    first (Predicate, List, 1).
 
-first(Pred,List) ->
-						% Looks for first element of List satisfying Pred.
-						% Returns {ok, {Element,Position}} | none
-    first(Pred,List,1).
+first (_Predicate, [], _Position) ->
+    none;
+first (Predicate, List, Position) ->
+    first (Predicate, List, Position, Predicate(hd(List))).
 
-first(Pred,[H|T],Position) ->
-    case Pred(H) of
-	true ->
-	    {ok, {H,Position}};
-	false ->
-	    first(Pred,T,Position+1)
-    end;
-first(_,[],_) ->
-    none.
-
+first (_Predicate, [H|T], Position, true) ->
+    {ok, {H, Position}};
+first (Predicate, [H|T], Position, false) ->
+    first (Predicate, T, Position+1).
 
 make_tree(Root,Tree) ->
     ok = file:make_dir(Root),
@@ -69,28 +58,26 @@ delete_tree(Root) ->
     ok = file:del_dir(Root).
 
 use_tree(Dir,Tree,Fun) ->
+    use_tree (Dir, Tree, Fun, fun(_,_) -> ok end).
+
+use_tree (Dir, Tree, Use_fun, Cleanup_fun) ->
     adlib:make_tree(Dir,Tree),
-    LastCall = case catch Fun(Dir,Tree) of
+    LastCall = case catch Use_fun(Dir,Tree) of
 		   {'EXIT',Reason} ->
 		       fun() -> exit(Reason) end;
 		   Result ->
 		       fun() -> Result end
 	       end,
+    Cleanup_fun (Dir, Tree),
     adlib:delete_tree(Dir),
     LastCall().
-
+    
 temporary_pathname() ->
     Possible_roots = [os:getenv(X) || X <- ["TMP","TEMP","HOME"], os:getenv(X)/=false],
-    {ok, {Root,_}} = first(
-		       fun(X) ->
-			       case file:read_file_info(X) of
-				   {ok,{file_info,_,directory,read_write,_,_,_,_,_,_,_,_,_,_}} ->
-				       true;
-				   _Other ->
-				       false
-			       end
-		       end,
-		       Possible_roots),
+    {ok, {Root,_}} =
+	first(
+	  fun(X) -> filelib:is_dir(X) end,
+	  Possible_roots),
     Pathname = filename:join(Root,unique_string()),
     {error,enoent} = file:read_file_info(Pathname),
     Pathname.
@@ -146,10 +133,13 @@ unique(List) ->
         [],
         List)).
 
-accumulate_unless(true, _X, Acc) ->
-    Acc;
-accumulate_unless(false, X, Acc) ->
-    [X|Acc].
+accumulate_unless (B, X, Acc) ->
+    accumulate_if (not B, X, Acc).
+
+accumulate_if (true, Item, List) ->
+    [Item|List];
+accumulate_if (false, _Item, List) ->
+    List.
 
 strip_whitespace(String) when list(String) ->
     lists:filter(
@@ -215,11 +205,6 @@ xray(Root,Item,[extension|T],Acc) ->
 xray(_,_,[],Acc) ->
     lists:reverse(Acc).
     
-accumulate_if (Item, List, true) ->
-    [Item|List];
-accumulate_if (_, List, false) ->
-    List.
-
 is_below_directory (Path1, Path2) ->
     is_below_directory2 (lists:reverse (filename:split (Path1)), lists:reverse (filename:split(Path2))).
 

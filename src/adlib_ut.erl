@@ -74,7 +74,7 @@ tree_handling_test() ->
     {error,enoent} = file:read_file_info(Tmp_dirname),
     pass.
 
-tree_using_test() ->
+use_tree_test() ->
     Tmp_dirname = adlib:temporary_pathname(),
     Tree = tree(),
     Fun = fun(_Dir,_Tree) -> ok
@@ -88,57 +88,38 @@ tree_using_test() ->
     ["test","test2","testdir"] = adlib:use_tree(Tmp_dirname,Tree,ReturnFilesfun),
     {error,enoent} = file:read_file_info(Tmp_dirname),
 
-    BoumFun = fun(_Dir,_UsedTree) ->
-		      false = true
-	      end,
-
-    case catch adlib:use_tree(Tmp_dirname,Tree,BoumFun) of
+    case catch adlib:use_tree(Tmp_dirname,Tree, fun_that_explodes()) of
 	{'EXIT',{{badmatch,true},_}} ->
 	    ok
     end,
     {error,enoent} = file:read_file_info(Tmp_dirname),
     ok.
+
+fun_that_explodes () ->    
+    fun (_Dir, _UsedTree) ->
+	    false = true
+    end.
+
+use_tree_and_cleanup_test () ->
+    Tmp_dirname = adlib:temporary_pathname (),
+    put(cleanup_called, false),
+    case catch adlib:use_tree (
+		 Tmp_dirname,
+		 tree(),
+		 fun_that_explodes(),
+		 fun (Dir, _) ->
+			 put (cleanup_called, {true, Dir})
+		 end) of
+	{'EXIT',{{badmatch,true},_}} ->
+	    ok
+    end,
+    {true, Tmp_dirname} = get (cleanup_called).
     
 first_test() ->
 	Three = fun(X) -> X == 3 end,
 	{ok, {3,2}} = adlib:first(Three, lists:seq(2,10)),
 	none = adlib:first(Three, lists:seq(4,10)),
 	{ok, {toto,4}} = adlib:first(fun(X) -> is_atom(X) end, [3,"Hello",{1,haha},toto,3.2]).
-
-guarded_call_sequence_test() ->
-	Result = adlib:guarded_call(
-			   {init},
-			   fun({context,{Atom}}) -> {Atom,setup} end,
-			   fun({context,{Atom1,Atom2}}) ->
-					   atom_to_list(Atom1)++atom_to_list(Atom2)
-			   end,
-			   fun({{context,{Atom1,Atom2}},{result,_}}) ->
-					   {Atom1,Atom2,teardown}
-			   end),
-	{result,"initsetup",context,{init,setup,teardown}} = Result.
-
-guarded_call_function_blowup_test() ->
-	put(teardown_called,false),
- 	ok = case catch adlib:guarded_call(
-			  init,
-			  fun({context,Context}) ->
-				  Context
-			  end,
-			  fun({context,_}) ->
-				  ok = nok
-			  end,
-			  fun({{context,_},{result,_}}) ->
-				  put(teardown_called,with_result);
-			     ({{context,_},noresult}) ->
-				  put(teardown_called,without_result)
-			  end)
-		 of
-		 {'EXIT',{{badmatch,nok},_}} ->
-		     ok;
-		 Other ->
-		     Other
-	     end,
-    without_result = get(teardown_called).
 
 unique_test() ->
 	[] = adlib:unique([]),
@@ -245,12 +226,13 @@ fold_files_pick_erlang_source_absolute_with_subdirectory_test() ->
     
     
 accumulate_if_test () ->
-    [] = adlib:accumulate_if (foo, [], false),
-    [foo, bar] = adlib:accumulate_if (foo, [bar], true).
+    [] = adlib:accumulate_if (false, foo, []),
+    [foo, bar] = adlib:accumulate_if (true, foo, [bar]).
 
 is_below_directory_test() ->
     true = adlib:is_below_directory ("/tmp", "/tmp"),
     false = adlib:is_below_directory ("/tmp", "/home/toto"),
     false = adlib:is_below_directory ("/tmpbla", "/tmp"),
     true = adlib:is_below_directory ("/Users/dodo/dir/my_file", "/Users").
+
 

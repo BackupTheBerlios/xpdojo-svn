@@ -28,13 +28,33 @@
 
 -module (compiling).
 -export ([modules_from_directory/2, differences/2, differences/3, file_time/1, module_time/1]).
+-export ([source_of_module/1, purge_modules_from_directory/1, loaded_modules/0, loaded_modules/1]).
 
 -include_lib("kernel/include/file.hrl").
 
+loaded_modules () ->
+    [X || {X,_Y} <- code:all_loaded()].
+
+purge_modules_from_directory (Dir) ->
+    lists:foreach (fun(M) -> code:purge(M) end, loaded_modules (Dir)),
+    lists:foreach (fun(M) -> code:delete(M) end, loaded_modules (Dir)),
+    lists:foreach (fun(M) -> code:purge(M) end, loaded_modules (Dir)).
+    
+source_of_module (Atom) ->
+    source_of_module2 (lists:keysearch (source, 1, Atom:module_info (compile))).
+
+source_of_module2 ({value, {source, Source}}) ->
+    Source;
+source_of_module2 (false) ->
+    unknown.
+
+loaded_modules (Dir) ->
+    modules_from_directory (loaded_modules(), Dir).
+
 modules_from_directory (Modules, Directory) ->
     lists:foldl (
-      fun ({Module, Module_file}, Acc) ->
-	      adlib:accumulate_if (Module, Acc, adlib:is_below_directory (Module_file, Directory))
+      fun (Module, Acc) ->
+	      adlib:accumulate_if (adlib:is_below_directory (source_of_module (Module), Directory), Module, Acc)
       end,
       [],
       Modules).
@@ -60,7 +80,7 @@ differences (Modules, Files, Is_modified_fun) ->
     differences2 (Sorted_modules, Files_sorted_by_module, [], [], [], Is_modified_fun).
 
 differences2 ([Module | Modules_tail], [{Module, File} | Files_tail], Added, Deleted, Modified, Is_modified) ->
-    differences2 (Modules_tail, Files_tail, Added, Deleted, adlib:accumulate_if (File, Modified, Is_modified (Module, File)), Is_modified);
+    differences2 (Modules_tail, Files_tail, Added, Deleted, adlib:accumulate_if (Is_modified (Module, File), File, Modified), Is_modified);
 
 differences2 (Modules = [Module1 | _], [{Module2, File} | Files_tail], Added, Deleted, Modified, Is_modified) when Module1 > Module2 ->
     differences2 (Modules, Files_tail, [File | Added], Deleted, Modified, Is_modified);

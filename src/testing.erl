@@ -27,7 +27,7 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(testing).
--export([run_functions/1,run_modules/2]).
+-export([run_functions/1, run_modules/2, use_and_purge_tree/2]).
 
 run_functions(Functions) when list(Functions) ->
     lists:foldl(
@@ -50,4 +50,12 @@ run_modules(Modules,Pattern) when list(Modules) ->
 select_test_functions(Module,Pattern) when atom(Module), function(Pattern) ->
     [{Module,X} || {X,Y} <- Module:module_info(exports), Pattern(X), Y == 0].
 
+use_and_purge_tree (Tree, Fun) ->
+    adlib:use_tree (
+      adlib:temporary_pathname(),
+      Tree,
+      Fun,
+      fun (Dir, _) ->
+	      compiling:purge_modules_from_directory (Dir)
+      end).
 

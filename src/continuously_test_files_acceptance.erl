@@ -28,6 +28,7 @@
 
 -module(continuously_test_files_acceptance).
 -compile(export_all).
+-import(testing, [use_and_purge_tree/2]).
 
 bad_foo() ->
     {file,"foo.erl",
@@ -84,11 +85,11 @@ baz() ->
       "run() -> yohoho."]}.
 
 directory_empty_test() ->
-    adlib:use_tree(adlib:temporary_pathname(),
-		   [],
-		   fun(Dir,_) ->
-			   [{modules,0,0}] = xpdojo:test_files (Dir)
-		   end).
+    use_and_purge_tree (
+      [],
+      fun(Dir,_) ->
+	      [{modules,0,0}] = xpdojo:test_files (Dir)
+      end).
 
 tree_without_code() ->
     [{directory, "temporary",
@@ -101,47 +102,46 @@ tree_without_code() ->
 	 {file, "machin.o", []}]}]}].
     
 tree_without_code_test() ->
-    adlib:use_tree (adlib:temporary_pathname(),
-		    tree_without_code(),
-		    fun (Dir,_) ->
-			    [{modules,0,0}] = xpdojo:test_files (Dir)
-		    end).
+    use_and_purge_tree (
+      tree_without_code(),
+      fun (Dir,_) ->
+	      [{modules,0,0}] = xpdojo:test_files (Dir)
+      end).
 
 single_module_test() ->
-    adlib:use_tree (adlib:temporary_pathname(),
-		    [foo()],
-		    fun (Dir,_) ->
-			    [{acceptance,0,0}, {unit,0,0}, {modules,1,1}] = xpdojo:test_files (Dir)
-		    end).
+    use_and_purge_tree (
+      [foo()],
+      fun (Dir,_) ->
+	      [{acceptance,0,0}, {unit,0,0}, {modules,1,1}] = xpdojo:test_files (Dir)
+      end).
 
 multi_module_test() ->
-    adlib:use_tree (adlib:temporary_pathname(),
-		    [foo(), bad_bar(), baz()],
-		    fun (Dir,_) ->
-			    [{modules,3,2}] = xpdojo:test_files (Dir)
-		    end).
+    use_and_purge_tree (
+      [foo(), bad_bar(), baz()],
+      fun (Dir,_) ->
+	      [{modules,3,2}] = xpdojo:test_files (Dir)
+      end).
 
 single_module_with_unit_test() ->
-    adlib:use_tree (adlib:temporary_pathname(),
-		    [foo(), foo_ut()],
-		    fun (Dir,_) ->
-			    [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir)
-		    end).
+    use_and_purge_tree (
+      [foo(), foo_ut()],
+      fun (Dir,_) ->
+	      [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir)
+      end).
 
 multi_module_with_one_failing_unit_test() ->
-    adlib:use_tree (adlib:temporary_pathname(),
-		    [foo(), foo_ut(), bar(), bad_bar_ut()],
-		    fun (Dir,_) ->
-			    [{unit,2,1}, {modules,4,4}] = xpdojo:test_files (Dir)
-		    end).
+    use_and_purge_tree (
+      [foo(), foo_ut(), bar(), bad_bar_ut()],
+      fun (Dir,_) ->
+	      [{unit,2,1}, {modules,4,4}] = xpdojo:test_files (Dir)
+      end).
 
 failing_build_bails_out_test() ->
-    adlib:use_tree (adlib:temporary_pathname(),
-		    [foo(), bad_bar(), baz(), foo_ut()],
-		    fun (Dir,_) ->
-			    [{modules,4,3}] = xpdojo:test_files (Dir)
-		    end).
-
+    use_and_purge_tree (
+      [foo(), bad_bar(), baz(), foo_ut()],
+      fun (Dir,_) ->
+	      [{modules,4,3}] = xpdojo:test_files (Dir)
+      end).
 
 foo_more_utt() ->
     {file,"foo_more_utt.erl",
@@ -160,13 +160,14 @@ foo_utt() ->
       "toto_test() -> ok = foo:bar()."]}.
 
 custom_unit_filters_test() ->
-    Options = [{unit_modules_filter, adlib:ends_with("_utt")},
-	       {unit_functions_filter, adlib:ends_with("_tt")}],
-    adlib:use_tree (adlib:temporary_pathname(),
-		    [foo(), foo_ut(), foo_more_utt(), foo_utt()],
-		    fun (Dir,_) ->
-			    [{unit,3,2}, {modules,4,4}] = xpdojo:test_files (Dir, Options)
-		    end).
+    Options = 
+	[{unit_modules_filter, adlib:ends_with("_utt")},
+	 {unit_functions_filter, adlib:ends_with("_tt")}],
+    use_and_purge_tree (
+      [foo(), foo_ut(), foo_more_utt(), foo_utt()],
+      fun (Dir,_) ->
+	      [{unit,3,2}, {modules,4,4}] = xpdojo:test_files (Dir, Options)
+      end).
 
 foo_acceptance() ->
     {file,"foo_acceptance.erl",
@@ -176,43 +177,43 @@ foo_acceptance() ->
       "toto_test() -> hoho = foo:bar()."]}.
     
 single_failing_acceptance_test() ->
-    adlib:use_tree (adlib:temporary_pathname(),
-		    [foo(), foo_acceptance()],
-		    fun (Dir,_) ->
-			    [{acceptance,1,0}, {unit,0,0}, {modules,2,2}] = xpdojo:test_files (Dir)
-		    end).
+    use_and_purge_tree (
+      [foo(), foo_acceptance()],
+      fun (Dir,_) ->
+	      [{acceptance,1,0}, {unit,0,0}, {modules,2,2}] = xpdojo:test_files (Dir)
+      end).
 
 reload_changed_file_test() ->    
-    adlib:use_tree (adlib:temporary_pathname(),
-		    [foo(), foo_ut()],
-		    fun (Dir,_) ->
-			    [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir),
-			    file:write_file(filename:join(Dir,"foo_ut.erl"),
-					    "-module(foo_ut).\n"
-					    "-export([foo_test/0]).\n"
-					    "foo_test() -> nok = foo:bar()."),
-			    [{unit,1,0}, {modules,2,2}] = xpdojo:test_files (Dir)
-		    end).
+    use_and_purge_tree (
+      [foo(), foo_ut()],
+      fun (Dir,_) ->
+	      [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir),
+	      file:write_file(filename:join(Dir,"foo_ut.erl"),
+			      "-module(foo_ut).\n"
+			      "-export([foo_test/0]).\n"
+			      "foo_test() -> nok = foo:bar()."),
+	      [{unit,1,0}, {modules,2,2}] = xpdojo:test_files (Dir)
+      end).
 
 add_module_to_directory_test() ->
-    adlib:use_tree (adlib:temporary_pathname(),
-		    [foo(), foo_ut()],
-		    fun (Dir,_) ->
-			    [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir),
-			    file:write_file(filename:join(Dir,"bar.erl"),
-					    "-module(bar).\n"
-					    "-export([foo/0]).\n"
-					    "foo() -> yohoho."),
-			    [{acceptance,0,0}, {unit,1,1}, {modules,3,3}] = xpdojo:test_files (Dir)
-		    end).
+    use_and_purge_tree (
+      [foo(), foo_ut()],
+      fun (Dir,_) ->
+	      [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir),
+	      file:write_file(filename:join(Dir,"bar.erl"),
+			      "-module(bar).\n"
+			      "-export([foo/0]).\n"
+			      "foo() -> yohoho."),
+	      [{acceptance,0,0}, {unit,1,1}, {modules,3,3}] = xpdojo:test_files (Dir)
+      end).
 
 unchanged_test() ->
-    adlib:use_tree (adlib:temporary_pathname(),
-		    [foo_acceptance(),
-		    {directory,"src",[foo(),bar()]},
-		    {directory,"unit",[foo_ut(), bar_ut()]}],
-		    fun (Dir,_) ->
-			    [{acceptance,1,0}, {unit,2,2}, {modules,5,5}] = xpdojo:test_files (Dir),
-			    unchanged = xpdojo:test_files (Dir)
-		    end).
+    use_and_purge_tree (
+      [foo_acceptance(),
+       {directory,"src",[foo(),bar()]},
+       {directory,"unit",[foo_ut(), bar_ut()]}],
+      fun (Dir,_) ->
+	      [{acceptance,1,0}, {unit,2,2}, {modules,5,5}] = xpdojo:test_files (Dir),
+	      unchanged = xpdojo:test_files (Dir)
+      end).
     
