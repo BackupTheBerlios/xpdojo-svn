@@ -127,6 +127,39 @@ single_module_with_unit_test() ->
 		    fun (Dir,_) ->
 			    [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir)
 		    end).
+
+multi_module_with_one_failing_unit_test() ->
+    adlib:use_tree (adlib:temporary_pathname(),
+		    [foo(), foo_ut(), bar(), bad_bar_ut()],
+		    fun (Dir,_) ->
+			    [{acceptance,0,0}, {unit,2,1}, {modules,4,4}] = xpdojo:test_files (Dir)
+		    end).
+
+
+foo_more_utt() ->
+    {file,"foo_more_utt.erl",
+     ["-module(foo_more_utt).",
+      "-export([bar_t/0,bar_tt/0,bar2_tt/0]).",
+      "bar_t() -> ok = foo:bar().",
+      "bar_t(X) -> X = foo:bar().",
+      "bar_tt() -> ok = foo:bar().",
+      "bar2_tt() -> nok = foo:bar()."]}.
+
+foo_utt() ->
+    {file,"foo_utt.erl",
+     ["-module(foo_utt).",
+      "-export([bar_tt/0, toto_test/0]).",
+      "bar_tt() -> ok = foo:bar().",
+      "toto_test() -> ok = foo:bar()."]}.
+
+custom_unit_filters_test() ->
+    Options = [{unit_modules_filter, adlib:ends_with("_utt")},
+	       {unit_functions_filter, adlib:ends_with("_tt")}],
+    adlib:use_tree (adlib:temporary_pathname(),
+		    [foo(), foo_ut(), foo_more_utt(), foo_utt()],
+		    fun (Dir,_) ->
+			    [{acceptance,0,0}, {unit,3,2}, {modules,4,4}] = xpdojo:test_files (Dir, Options)
+		    end).
     
 %     Dir = adlib:temporary_pathname(),
 %     Project = [{directory, Dir}],

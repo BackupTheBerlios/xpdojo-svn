@@ -69,7 +69,9 @@ run_acceptance_tests() ->
     run_modules(Filter,{suffix,"_test"}).
 		     
 select_test_functions(Module,Pattern) when atom(Module), tuple(Pattern) ->
-    [{Module,X} || {X,Y} <- Module:module_info(exports), is_match(X,Pattern), Y == 0].
+    [{Module,X} || {X,Y} <- Module:module_info(exports), is_match(X,Pattern), Y == 0];
+select_test_functions(Module,Pattern) when atom(Module), function(Pattern) ->
+    [{Module,X} || {X,Y} <- Module:module_info(exports), Pattern(X), Y == 0].
 
 is_match(Function,{prefix,Prefix}) ->		  
     Function_prefix = string:left(atom_to_list(Function),length(Prefix)),

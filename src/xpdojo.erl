@@ -28,10 +28,19 @@
 
 -module(xpdojo).
 
--export([dashboard/2,test_files/1]).
+-export([dashboard/2,test_files/1, test_files/2]).
+
+default_options() ->
+    [{unit_modules_filter, adlib:ends_with("ut")},
+     {unit_functions_filter, adlib:ends_with("test")}].
 
 test_files (Dir) ->
-      acceptance (unit (compile ( find_modules (Dir)))).
+    test_files(Dir, default_options()).
+
+test_files(Dir, [{unit_modules_filter,Unit_modules_filter},
+		 {unit_functions_filter,Unit_functions_filter}]) ->
+    Unit = unit (Unit_modules_filter, Unit_functions_filter),
+    acceptance (Unit (compile ( find_modules (Dir)))).
 
 find_modules (Dir) ->
     Filter_erlang_source = fun ([regular,".erl",Name],Acc) ->
@@ -54,10 +63,17 @@ accumulate_if_succeeded ({ok, Module}, Acc) ->
 accumulate_if_succeeded (_, Acc) ->
     Acc.
 
-unit ({Total_module_count, Compiled_modules}) ->
-    Unit_tests = [X || X <- Compiled_modules, adlib:ends_with(X,"_ut")],
-    {Total,Failures} = testing:run_modules (Unit_tests, {suffix, "_test"}),
-    [{unit,Total,Total-length(Failures)}, {modules,Total_module_count,length(Compiled_modules)}].
+% unit ({Total_module_count, Compiled_modules}) ->
+%     Unit_tests = [X || X <- Compiled_modules, adlib:ends_with(X,"_ut")],
+%     {Total,Failures} = testing:run_modules (Unit_tests, {suffix, "_test"}),
+%     [{unit,Total,Total-length(Failures)}, {modules,Total_module_count,length(Compiled_modules)}].
+
+unit (Mod_filter, Fun_filter) ->
+    fun({Total_module_count, Compiled_modules}) ->
+	    Unit_tests = [X || X <- Compiled_modules, Mod_filter(X)],
+	    {Total,Failures} = testing:run_modules (Unit_tests, Fun_filter),
+	    [{unit,Total,Total-length(Failures)}, {modules,Total_module_count,length(Compiled_modules)}]
+    end.
 
 acceptance ( Results ) ->
     [{acceptance,0,0}|Results].

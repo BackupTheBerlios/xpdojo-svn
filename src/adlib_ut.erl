@@ -158,7 +158,8 @@ begins_with_test() ->
     true = adlib:begins_with("hello","hell"),
     true = adlib:begins_with("yo","yo"),
     false = adlib:begins_with("hello","lo"),
-    false = adlib:begins_with("yo","longer").
+    false = adlib:begins_with("yo","longer"),
+    true = adlib:begins_with(this_is_an_atom,"this_").
 
 ends_with_test() ->
     true = adlib:ends_with("bla","a"),

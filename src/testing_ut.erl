@@ -44,6 +44,8 @@ run_functions_test() ->
 run_modules_test() ->
     {2,[_Reason1]} = testing:run_modules([?MODULE],{suffix,"_withfunnysuffix"}),
     {3,[_Reason2]} = testing:run_modules([?MODULE],{prefix,"funnyprefixed_"}),
+    {2,[_Reason1]} = testing:run_modules([?MODULE], adlib:ends_with("_withfunnysuffix")),
+    {3,[_Reason2]} = testing:run_modules([?MODULE], adlib:begins_with("funnyprefixed_")),
     pass.
 
 run_modules_predicate_test() ->

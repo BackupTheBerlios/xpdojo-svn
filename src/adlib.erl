@@ -164,6 +164,8 @@ ends_with(Atom, Ending) when atom(Atom) ->
 ends_with(String,Ending) ->
     begins_with(lists:reverse(String),lists:reverse(Ending)).
 
+begins_with (Atom, String) when atom(Atom) ->
+    begins_with (atom_to_list (Atom), String);
 begins_with([Char|StringTail],[Char|TokenTail]) ->
     begins_with(StringTail,TokenTail);
 begins_with([Char1|_],[Char2|_]) when Char1 /= Char2 ->
