@@ -29,6 +29,7 @@
 -module(adlib).
 -export([guarded_call/4,make_tree/2,delete_tree/1,use_tree/3,temporary_module_name/0,temporary_pathname/0]).
 -export([first/2,unique/1,strip_whitespace/1,begins_with/2,begins_with/1,ends_with/2,ends_with/1,fold_files/4]).
+-export([accumulate_if/3, is_below_directory/2]).
 
 -include_lib("kernel/include/file.hrl").
 
@@ -214,4 +215,17 @@ xray(Root,Item,[extension|T],Acc) ->
 xray(_,_,[],Acc) ->
     lists:reverse(Acc).
     
-    
+accumulate_if (Item, List, true) ->
+    [Item|List];
+accumulate_if (_, List, false) ->
+    List.
+
+is_below_directory (Path1, Path2) ->
+    is_below_directory2 (lists:reverse (filename:split (Path1)), lists:reverse (filename:split(Path2))).
+
+is_below_directory2 ([], Path2) ->
+    false;
+is_below_directory2 (Path1, Path2)  when Path1 == Path2 ->
+    true;
+is_below_directory2 (Path1, Path2) ->
+    is_below_directory2 (tl (Path1), Path2).

@@ -244,3 +244,14 @@ fold_files_pick_erlang_source_absolute_with_subdirectory_test() ->
 		   end).
     
     
+accumulate_if_test () ->
+    [] = adlib:accumulate_if (foo, [], false),
+    [foo, bar] = adlib:accumulate_if (foo, [bar], true).
+
+is_below_directory_test() ->
+    true = adlib:is_below_directory ("/tmp", "/tmp"),
+    false = adlib:is_below_directory ("/tmp", "/home/toto"),
+    false = adlib:is_below_directory ("/tmpbla", "/tmp"),
+    true = adlib:is_below_directory ("/Users/dodo/dir/my_file", "/Users").
+
+
