@@ -119,10 +119,37 @@ partial_build_cat() ->
 multiple_compiled_module_cat() ->
     Tree = [foo(),foo_ut(),bar()],
     adlib:use_tree(adlib:temporary_pathname(),
-				  Tree,
-				  fun(Dir2,_Tree) ->
-					  Project = [{files,[filename:join(Dir2,"bar.erl"),
-							     filename:join(Dir2,"foo.erl")]}],
-					  {1,[]} = xpdojo:dashboard(Project, unit_tests)
-				  end).
-    
+		   Tree,
+		   fun(Dir2,_Tree) ->
+			   Project = [{files,[filename:join(Dir2,"bar.erl"),
+					      filename:join(Dir2,"foo.erl")]}],
+			   {1,[]} = xpdojo:dashboard(Project, unit_tests)
+		   end).
+
+
+empty_directory_cat() ->
+    Dir = adlib:temporary_pathname(),
+    adlib:use_tree(Dir,
+		   [],
+		   fun(Dir2,_Tree) ->
+			   empty_project = xpdojo:dashboard([{directory,Dir2}],unit_tests) 
+		   end).
+
+empty_hierarchical_directory_cat() ->
+    Dir = adlib:temporary_pathname(),
+    adlib:use_tree(Dir,
+		   [{directory,"temporary",[]}],
+		   fun(Dir2,_Tree) ->
+			   empty_project = xpdojo:dashboard([{directory,Dir2}],unit_tests) 
+		   end).
+
+
+non_empty_directory_cat() ->
+    Dir = adlib:temporary_pathname(),
+    Tree = [foo()],
+    adlib:use_tree(Dir,
+		   Tree,
+		   fun(Dir2,_Tree) ->
+			    {0,[]} = xpdojo:dashboard([{directory,Dir2}],unit_tests) 
+		   end).
+

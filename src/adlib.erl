@@ -27,7 +27,7 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(adlib).
--export([guarded_call/4,make_tree/2,delete_tree/1,use_tree/3,temporary_module_name/0,temporary_pathname/0]).
+-export([guarded_call/4,make_tree/2,delete_tree/1,use_tree/3,temporary_module_name/0,temporary_pathname/0,fold_files/4]).
 -export([first/2,unique/1,strip_whitespace/1,begins_with/2,begins_with/1,ends_with/2,ends_with/1]).
 
 -include_lib("kernel/include/file.hrl").
@@ -79,7 +79,7 @@ delete_tree(Root) ->
     depopulate(Root),
     ok = file:del_dir(Root).
 
- use_tree(Dir,Tree,Fun) ->
+use_tree(Dir,Tree,Fun) ->
     adlib:make_tree(Dir,Tree),
     LastCall = case catch Fun(Dir,Tree) of
 		   {'EXIT',Reason} ->
@@ -89,17 +89,6 @@ delete_tree(Root) ->
 	       end,
     adlib:delete_tree(Dir),
     LastCall().
-
-%use_tree(Root,Tree,Fun) ->
-%    adlib:make_tree(Root,Tree),
-%    Result = case catch Fun(Root,Tree) of
-%	{'EXIT',Reason} ->
-%	    Reason;
-%	Result2 ->
-%	    Result2
-%    end,
-%    adlib:delete_tree(Root),
-%    Result.
 
 temporary_pathname() ->
     Possible_roots = [os:getenv(X) || X <- ["TMP","TEMP","HOME"], os:getenv(X)/=false],
@@ -212,3 +201,39 @@ begins_with(Token) ->
 						%     EndingLen = string:len(Ending),
 						%     string:sub_string(String,StringLen-EndingLen+1) == Ending.
 
+fold_files(Root,Filter,Action,Acc) ->
+%    [{Root,"toto","abc"},
+%     {filename:join(Root,"Dir1"),"titi",""},
+%     {filename:join(Root,"Dir1"),"tata","defg"}].
+
+    {ok, DirectoryContent} = file:list_dir(Root),
+    {NewAcc,_Directories} = lists:foldl(fun(Item,{MainAcc,Directories}) ->
+						{ok,File_info} = file:read_file_info(filename:join(Root,Item)),
+						HandleDirectory = fun() ->
+									  {MainAcc,[Item|Directories]}
+								  end,
+						HandleRegular = fun() ->
+									Temp = fun(Acc2) ->
+										       Extension = filename:extension(Item),
+										       Name = filename:basename(Item,Extension),
+										       Action(file,Root,Name,Extension,Acc2)
+									       end,
+									{call_if(Filter(file,Item),Temp,MainAcc),Directories}
+								end,
+						case File_info#file_info.type of
+						  directory ->
+							HandleDirectory();
+						  regular ->
+							HandleRegular()
+						end
+					end,
+					{Acc,[]},
+					DirectoryContent
+				       ),
+    NewAcc.	       
+
+
+call_if(true,Fun,Acc) ->
+    Fun(Acc);
+call_if(_, _, Acc) ->
+    Acc.

@@ -31,6 +31,13 @@
 
 dashboard( [{files,[]}], _Atom) ->
     empty_project;
+dashboard( [{directory,Name}], _Atom) ->
+    case file:list_dir(Name) of
+	{ok, []} ->
+	    empty_project;
+	{ok, _List} ->
+	    {0,[]}
+    end;
 dashboard( [{files,Files}], _Atom) ->
     ModuleCompilation = compileModules(Files),
     
@@ -38,7 +45,6 @@ dashboard( [{files,Files}], _Atom) ->
 		  lists:all(fun({_File,non_existent}) -> true;
 			       (_X) ->false
 			    end,ModuleCompilation)).
-
 
 compileModules([]) ->
     [];

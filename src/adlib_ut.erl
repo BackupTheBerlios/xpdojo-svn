@@ -74,6 +74,7 @@ tree_handling_test() ->
     {error,enoent} = file:read_file_info(Tmp_dirname),
     pass.
 
+    
 tree_using_test() ->
     Tmp_dirname = adlib:temporary_pathname(),
     Tree = tree(),
@@ -174,4 +175,32 @@ ends_with_fun_test() ->
 begins_with_fun_test() ->
     Begins_with_bla = adlib:begins_with("bla"),
     true = Begins_with_bla("blarhubarb").
+    
+fold_files_test() ->
+    Filter = fun(file,_Name) ->
+		     true;
+		(_,_) ->
+		     false
+	     end,
+    Action = fun(file, Path, Name, Extension, Acc) ->
+		     [{Path,Name,Extension}|Acc]
+	     end,
+     adlib:use_tree(adlib:temporary_pathname(),
+ 		   [{file,"toto.abc",[]}],
+ 		   fun(Root,_Tree) ->
+ 			   Expected = [{Root,"toto",".abc"}],
+ 			   Expected = adlib:fold_files(Root,Filter,Action,[])
+ 		   end).
+
+%     adlib:use_tree(adlib:temporary_pathname(),
+% 		   [{file,"toto.abc",[]},
+% 		    {directory,"Dir1",
+% 		     [{file,"titi",[]},{file,"tata.defg",[]}]}],
+% 		   fun(Root,_Tree) ->
+% 			   Expected = [{Root,"toto","abc"},
+% 				       {filename:join(Root,"Dir1"),"titi",""},
+% 				       {filename:join(Root,"Dir1"),"tata","defg"}],
+% 			   Expected = adlib:fold_files(Root,Filter,Action,[])
+% 		   end).
+		   
     
