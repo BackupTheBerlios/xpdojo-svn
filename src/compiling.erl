@@ -111,8 +111,14 @@ module_name (File) ->
     list_to_atom (filename:basename (File, ".erl")).
 
 compile (Dir, List) ->
-    compile (Dir, List, [], []).
+    compile (Dir, List, {[], []}).
 
-compile (_Dir, [], Compiled, Failed) ->
-    {{compiled, Compiled}, {failed, Failed}}.
-    
+compile (_Dir, [], {Compiled, Failed}) ->
+    {{compiled, Compiled}, {failed, Failed}};
+compile (Dir, [File|T], Acc) ->
+    compile (Dir, T, classify_by_result (compile:file(File), File, Acc)).
+
+classify_by_result ({ok, Module}, File, {Compiled, Failed}) ->
+    {[Module|Compiled], Failed};
+classify_by_result (error, File, {Compiled, Failed}) ->
+    {Compiled, [module_name (File) | Failed]}.

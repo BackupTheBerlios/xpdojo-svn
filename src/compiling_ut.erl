@@ -78,8 +78,17 @@ differences_test() ->
 compile_nothing_test() ->
     {{compiled, []}, {failed, []}} = compiling:compile ("my_dir", []).
 
-% compile_test() ->
-%     use_and_purge_tree (
-%       [, "src", [bar(), ]},
-%        {directory, "build", []}],
-      
+compile_one_good_file_test() ->
+    use_and_purge_tree (
+      [{file, "foo.erl", source:module(foo,[bar])}],
+      fun (Dir,_) ->
+	      {{compiled, [foo]}, {failed, []}} = compiling:compile (Dir, [filename:join (Dir, "foo.erl")])
+      end).
+
+compile_one_bad_file_test() ->
+    use_and_purge_tree (
+      [{file, "foo.erl", "-module(foo).\nbla() -."}],
+      fun (Dir,_) ->
+	      {{compiled, []}, {failed, [foo]}} = compiling:compile (Dir, [filename:join (Dir, "foo.erl")])
+      end).
+
