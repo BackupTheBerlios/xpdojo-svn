@@ -1,4 +1,4 @@
-%%% Copyright (c) 2004 Dominic Williams, Nicolas Charpentier.
+%%% Copyright (c) Dominic Williams, Nicolas Charpentier.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -27,10 +27,7 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(testing).
--export([run_functions/1,run_modules/2,run_unit_tests/0,run_acceptance_tests/0,run_all/0]).
-
--import(lists).
--import(string).
+-export([run_functions/1,run_modules/2]).
 
 run_functions(Functions) when list(Functions) ->
     lists:foldl(
@@ -48,35 +45,9 @@ run_modules(Modules,Pattern) when list(Modules) ->
       fun(Module, {Count,Errors}) ->
 	      {ModuleCount,ModuleErrors} = run_functions(select_test_functions(Module,Pattern)),
 	      {Count+ModuleCount,lists:append(ModuleErrors,Errors)}
-      end, {0,[]}, Modules);
-run_modules(Pred,Pattern) ->
-    Modules = [ X || {X,_} <- code:all_loaded(), Pred(X) ],
-    run_modules(Modules,Pattern).
+      end, {0,[]}, Modules).
 
-run_all() ->
-    {{unit,run_unit_tests()},{acceptance,run_acceptance_tests()}}.
-
-run_unit_tests() ->
-    Filter = fun(Module) ->
-		     adlib:ends_with(atom_to_list(Module),"_ut")
-	     end,
-    run_modules(Filter,{suffix,"_test"}).
-
-run_acceptance_tests() ->
-    Filter = fun(Module) ->
-		     adlib:ends_with(atom_to_list(Module),"_acceptance")
-	     end,
-    run_modules(Filter,{suffix,"_test"}).
-		     
-select_test_functions(Module,Pattern) when atom(Module), tuple(Pattern) ->
-    [{Module,X} || {X,Y} <- Module:module_info(exports), is_match(X,Pattern), Y == 0];
 select_test_functions(Module,Pattern) when atom(Module), function(Pattern) ->
     [{Module,X} || {X,Y} <- Module:module_info(exports), Pattern(X), Y == 0].
 
-is_match(Function,{prefix,Prefix}) ->		  
-    Function_prefix = string:left(atom_to_list(Function),length(Prefix)),
-    string:equal(Function_prefix,Prefix);
-is_match(Function,{suffix,Suffix}) ->
-    Function_suffix = string:right(atom_to_list(Function),length(Suffix)),
-    string:equal(Function_suffix,Suffix).
 

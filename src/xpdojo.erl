@@ -1,4 +1,4 @@
-%%% Copyright (c) 2004 Dominic Williams, Nicolas Charpentier.
+%%% Copyright (c) Dominic Williams, Nicolas Charpentier.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,7 @@
 
 -module(xpdojo).
 
--export([dashboard/2,test_files/1, test_files/2]).
+-export([test_files/1, test_files/2, default_options/0]).
 
 default_options() ->
     [{unit_modules_filter, adlib:ends_with("ut")},
@@ -40,7 +40,7 @@ test_files (Dir) ->
 test_files(Dir, [{unit_modules_filter,Unit_modules_filter},
 		 {unit_functions_filter,Unit_functions_filter}]) ->
     Unit = unit (Unit_modules_filter, Unit_functions_filter),
-    acceptance (Unit (compile ( find_modules (Dir)))).
+    acceptance (Unit (compile (find_modules (Dir)))).
 
 find_modules (Dir) ->
     Filter_erlang_source = fun ([regular,".erl",Name],Acc) ->
@@ -63,20 +63,11 @@ accumulate_if_succeeded ({ok, Module}, Acc) ->
 accumulate_if_succeeded (_, Acc) ->
     Acc.
 
-% unit ({Total_module_count, Compiled_modules}) ->
-%     Unit_tests = [X || X <- Compiled_modules, adlib:ends_with(X,"_ut")],
-%     {Total,Failures} = testing:run_modules (Unit_tests, {suffix, "_test"}),
-%     [{unit,Total,Total-length(Failures)}, {modules,Total_module_count,length(Compiled_modules)}].
-
 unit (Mod_filter, Fun_filter) ->
-    fun({0,[]}) ->
-	    [{modules,0,[]}];
-       ({Total_module_count, Compiled_modules}) when length(Compiled_modules) < Total_module_count ->
+    fun({Total_module_count, Compiled_modules}) when length(Compiled_modules) < Total_module_count; Total_module_count == 0 ->
 	    [{modules, Total_module_count, Compiled_modules}];
        ({Total_module_count, Compiled_modules}) ->
-	    Unit_tests = [X || X <- Compiled_modules, Mod_filter(X)],
-	    {Total,Failures} = testing:run_modules (Unit_tests, Fun_filter),
-	    [{unit, Total, Total- length (Failures)}, {modules, Total_module_count, Compiled_modules}]
+	    test_pass(Mod_filter, Fun_filter, Compiled_modules, unit, [{modules, Total_module_count, Compiled_modules}])
     end.
 
 acceptance ([{modules, Count, Compiled_modules}]) ->
@@ -84,96 +75,11 @@ acceptance ([{modules, Count, Compiled_modules}]) ->
 acceptance ([{unit, Total, Successes}, {modules, Count, Compiled_modules}]) when Successes < Total ->
     [{unit, Total, Successes}, {modules, Count, length (Compiled_modules)}];
 acceptance ([{unit, UnitTotal, UnitSuccesses}, {modules, Module_total, Compiled_modules}]) ->
-    Acceptance_tests = [X || X <- Compiled_modules, adlib:ends_with(X, "_acceptance")],
-    {Total, Failures} = testing:run_modules (Acceptance_tests, adlib:ends_with("_test")),
-    [{acceptance, Total, Total - length (Failures)}, {unit, UnitTotal, UnitSuccesses}, {modules,Module_total,length(Compiled_modules)}].
+    test_pass (adlib:ends_with("_acceptance"), adlib:ends_with("_test"), Compiled_modules, acceptance,
+	       [{unit, UnitTotal, UnitSuccesses}, {modules,Module_total,length(Compiled_modules)}]).
     
-dashboard( [{files,[]}], _Atom) ->
-    empty_project;
-
-dashboard ([{directory, Dir}], Atom) ->
-    KeepFiles = fun ([regular, File], Acc) ->
-			[File|Acc];
-		    (_, Acc) ->
-			Acc
-		end,
-    Files = adlib:fold_files (Dir, KeepFiles, [type, absolute_full_name], []),
-    dashboard ([{files, Files}], Atom);
-
-dashboard ([{files, Files}], _Atom) ->
-    ModuleCompilation = compileModules (Files),
-    checkNotEmpty (ModuleCompilation,
-		   lists:all (fun ({_File, non_existent}) -> true;
-				  (_X) -> false
-			      end,
-			      ModuleCompilation)).
-
-compileModules([]) ->
-    [];
-compileModules(Files) ->
-    Fun = fun(F,Acc) ->
-		  CompilationResult = compile:file(F,[binary,return_errors]),
-		  [{F,transform_compilation_result(CompilationResult)}|Acc]
-	  end,
-    lists:foldl(Fun,[],Files).
-
-checkNotEmpty([],_) ->
-    empty_project;
-checkNotEmpty(_,true) ->
-    empty_project;
-checkNotEmpty(Modules,false) ->
-    checkCompilation(Modules,
-		     lists:any(fun({_File,compilation_error}) -> true;
-				  (_X) ->false
-			       end,Modules)).
-checkCompilation(_,true) ->
-    build_failed;
-checkCompilation(Modules,false) ->
-%     unitTestRun(Modules).
-    unitTestCompilation(Modules).
-
-unitTestCompilation(Modules) ->
-    Fun = fun({File,{compiled,Module,Binary}},Acc) ->
-		  Corresponding_unit_test_file = string:concat(string:concat(string:substr(File,1,string:len(File)-4),"_ut"),
-							       string:substr(File,string:len(File)-3,4)),
-		  CompilationResult = compile:file(Corresponding_unit_test_file,[binary,return_errors]),
-		  [{File,{module,Module,Binary},{unit_test,transform_compilation_result(CompilationResult)}}|Acc]
-	  end,
-    unitTestRun(lists:foldl(Fun,[],Modules)).
+test_pass (Module_filter, Function_filter, Modules, PassName, Acc) ->
+    Tests = [X || X <- Modules, Module_filter(X)],
+    {Total,Failures} = testing:run_modules (Tests, Function_filter),
+    [{PassName, Total, Total- length (Failures)} | Acc ].
     
-unitTestRun(Modules) ->
-    Fun = fun({_File,{module,Module,Binary},
-	       {unit_test,{compiled,
-			   UnitTestModule,
-			   UnitTestBinary
-			  }
-	       }
-	      },Acc) ->
-		  load_module_in_memory(Module,Binary),
-		  load_module_in_memory(UnitTestModule,UnitTestBinary),
-		  [UnitTestModule|Acc];
-	     (_X,Acc) ->
-		  Acc
-	  end,
-    UnitTestModules = lists:foldl(Fun,[],Modules),
-    Result = testing:run_modules(UnitTestModules,{suffix,"_test"}),
-    Result.
-
-transform_compilation_result({error,[{_,[{none,compile,{epp,enoent}}]}],_}) ->
-    non_existent;
-transform_compilation_result({error,_A,_}) ->
-    compilation_error;
-transform_compilation_result({ok,Module,Binary}) ->
-    {compiled,Module,Binary}.
-
-load_module_in_memory(Module,Binary) ->
-    unload_module(lists:member(Module,erlang:loaded()),Module),
-    {module,Module} = erlang:load_module(Module,Binary),
-    ok.
-    
-unload_module(true,Module) ->
-    erlang:delete_module(Module),
-    erlang:purge_module(Module),
-    ok;
-unload_module(false,_) ->
-    ok.

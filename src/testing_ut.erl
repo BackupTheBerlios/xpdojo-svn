@@ -1,4 +1,4 @@
-%%% Copyright (c) 2004 Dominic Williams, Nicolas Charpentier.
+%%% Copyright (c) Dominic Williams, Nicolas Charpentier.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -29,11 +29,6 @@
 -module(testing_ut).
 -compile(export_all).
 
-%% Shortcut for running all these tests
-
-run() ->
-    testing:run_modules([?MODULE],{suffix,"_test"}).
-
 %% Actual test functions: use _test suffix
 
 run_functions_test() ->
@@ -42,23 +37,9 @@ run_functions_test() ->
     pass.
 
 run_modules_test() ->
-    {2,[_Reason1]} = testing:run_modules([?MODULE],{suffix,"_withfunnysuffix"}),
-    {3,[_Reason2]} = testing:run_modules([?MODULE],{prefix,"funnyprefixed_"}),
     {2,[_Reason1]} = testing:run_modules([?MODULE], adlib:ends_with("_withfunnysuffix")),
     {3,[_Reason2]} = testing:run_modules([?MODULE], adlib:begins_with("funnyprefixed_")),
     pass.
-
-run_modules_predicate_test() ->
-    {2, [_Reason1]} = testing:run_modules(filter_for_this_module(), {suffix, "_withfunnysuffix"}).
-
-%% Subfunctions
-
-filter_for_this_module() ->
-    fun(?MODULE) ->
-	    true;
-       (Other) when atom(Other) ->
-	    false
-    end.
 
 %% Dummy test functions (used to test the real functions)
 
