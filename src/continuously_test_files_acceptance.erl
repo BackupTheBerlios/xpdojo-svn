@@ -88,7 +88,7 @@ directory_empty_test() ->
     use_and_purge_tree (
       [],
       fun(Dir,_) ->
-	      [{modules,0,0}] = xpdojo:test_files (Dir)
+	      no_source_files = xpdojo:test_files (Dir)
       end).
 
 tree_without_code() ->
@@ -105,7 +105,7 @@ tree_without_code_test() ->
     use_and_purge_tree (
       tree_without_code(),
       fun (Dir,_) ->
-	      [{modules,0,0}] = xpdojo:test_files (Dir)
+	      no_source_files = xpdojo:test_files (Dir)
       end).
 
 single_module_test() ->
@@ -188,6 +188,7 @@ reload_changed_file_test() ->
       [foo(), foo_ut()],
       fun (Dir,_) ->
 	      [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir),
+	      timer:sleep(2000),
 	      file:write_file(filename:join(Dir,"foo_ut.erl"),
 			      "-module(foo_ut).\n"
 			      "-export([foo_test/0]).\n"

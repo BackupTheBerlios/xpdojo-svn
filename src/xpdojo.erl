@@ -34,21 +34,34 @@ default_options() ->
     [{unit_modules_filter, adlib:ends_with("ut")},
      {unit_functions_filter, adlib:ends_with("test")}].
 
-test_files (Dir) ->
-    test_files(Dir, default_options()).
+test_files (Directory) ->
+    test_files(Directory, default_options()).
 
-test_files(Dir, [{unit_modules_filter,Unit_modules_filter},
+test_files(Directory, [{unit_modules_filter,Unit_modules_filter},
 		 {unit_functions_filter,Unit_functions_filter}]) ->
     Unit = unit (Unit_modules_filter, Unit_functions_filter),
-    acceptance (Unit (compile (find_modules (Dir)))).
+    Continuation = fun(Dir, Files) ->
+			   Continuation2 = fun(Files2) -> acceptance (Unit (compile (Files2))) end,
+			   detect_modules (Dir, Files, Continuation2)
+		   end,
+    find_modules (Directory, Continuation).
 
-find_modules (Dir) ->
-    Filter_erlang_source = fun ([regular,".erl",Name],Acc) ->
-				   [Name|Acc];
-			       (_,Acc) ->
-				   Acc
-			   end,
-    adlib:fold_files (Dir, Filter_erlang_source, [type, extension, absolute_full_name],[]).
+find_modules (Directory, Continuation) ->
+    continue_find (source:erlang_files (Directory), Directory, Continuation).
+
+continue_find ([], _, _) ->
+    no_source_files;
+continue_find (Files, Directory, Continuation) ->
+    Continuation (Directory, Files).
+
+detect_modules (Directory, Files, Continuation) ->
+    Differences = compiling:differences (compiling:loaded_modules (Directory), Files),
+    case Differences of
+	[] ->
+	    unchanged;
+	_ ->
+	    Continuation (Files)
+    end.
 
 compile (Files) ->
     lists:foldl (

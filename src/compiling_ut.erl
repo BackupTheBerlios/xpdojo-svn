@@ -41,7 +41,6 @@ source_of_module_test () ->
       [bar ()],
       fun (Dir, _) ->
 	      Source = filename:join (Dir, "bar.erl"),
-	      io:fwrite("~p~n",[Source]),
 	      compile:file (Source),
 	      code:load_file (bar),
 	      Source = compiling:source_of_module (bar)
