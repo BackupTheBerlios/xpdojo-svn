@@ -44,9 +44,9 @@ first (_Predicate, [], _Position) ->
 first (Predicate, List, Position) ->
     first (Predicate, List, Position, Predicate(hd(List))).
 
-first (_Predicate, [H|T], Position, true) ->
+first (_Predicate, [H|_], Position, true) ->
     {ok, {H, Position}};
-first (Predicate, [H|T], Position, false) ->
+first (Predicate, [_|T], Position, false) ->
     first (Predicate, T, Position+1).
 
 make_tree(Root,Tree) ->

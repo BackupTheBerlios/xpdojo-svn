@@ -37,7 +37,6 @@ bar() ->
       "foo() -> ok."]}.
 
 source_of_module_test () ->
-    unknown = compiling:source_of_module (prim_file),
     use_and_purge_tree (
       [bar ()],
       fun (Dir, _) ->

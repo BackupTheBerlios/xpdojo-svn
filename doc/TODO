@@ -11,6 +11,7 @@ Continuous file testing:
 - optional compile options
 - continuous server
 - conflicts and auto(dojo)-development?
+- Look why some module don't have source code %    unknown = compiling:source_of_module (prim_file),
 
 General:
 
