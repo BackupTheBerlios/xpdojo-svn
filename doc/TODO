@@ -1,0 +1,28 @@
+FOR FIRST RELEASE
+-----------------
+
+Continuous file testing:
+
+- unchanged
+- removed file
+- provide a relative path.
+- optional location for .beam files
+- optional report function
+- optional compile options
+- continuous server
+- conflicts and auto(dojo)-development?
+
+General:
+
+- overview.html
+- install script
+- package
+
+
+LATER?
+------
+
+General:
+
+- define "Personas"
+
