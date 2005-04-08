@@ -1,4 +1,4 @@
-%%% Copyright (c) 2004 Dominic Williams, Nicolas Charpentier.
+%%% Copyright (c) 2004 Dominic Williams, Nicolas Charpentier, Virgile Delecolle.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -33,6 +33,7 @@
 -export([strip_whitespace/1, begins_with/2, begins_with/1, ends_with/2, ends_with/1]).
 -export([fold_files/4]).
 -export([accumulate_if/3, accumulate_unless/3, is_below_directory/2]).
+-export([merge_options/2]).
 
 -include_lib("kernel/include/file.hrl").
 
@@ -214,3 +215,11 @@ is_below_directory2 (Path1, Path2)  when Path1 == Path2 ->
     true;
 is_below_directory2 (Path1, Path2) ->
     is_below_directory2 (tl (Path1), Path2).
+
+merge_options (Custom,Default) ->
+	Custom_dict = dict:from_list(Custom),
+	Default_dict = dict:from_list(Default),
+	dict:to_list(dict:merge(
+	   fun(_Key, Left,Right) -> Left end,
+	   Custom_dict,
+	   Default_dict)).

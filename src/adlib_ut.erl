@@ -1,4 +1,4 @@
-%%% Copyright (c) Dominic Williams, Nicolas Charpentier.
+%%% Copyright (c) Dominic Williams, Nicolas Charpentier, Virgile Delecolle.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -236,3 +236,5 @@ is_below_directory_test() ->
     true = adlib:is_below_directory ("/Users/dodo/dir/my_file", "/Users").
 
 
+options_test() ->
+   [{titi, {1,2}}, {toto, "MYTOTO"}] = adlib:merge_options ([{toto, "MYTOTO"}], [{titi, {1,2}}, {toto, "MONTOTO"}]).

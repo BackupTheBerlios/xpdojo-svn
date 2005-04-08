@@ -1,4 +1,4 @@
-%%% Copyright (c) Dominic Williams, Nicolas Charpentier.
+%%% Copyright (c) Dominic Williams, Nicolas Charpentier, Virgile Delecolle.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without

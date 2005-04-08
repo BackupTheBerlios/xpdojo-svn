@@ -1,4 +1,4 @@
-%%% Copyright (c) 2005 Dominic Williams, Nicolas Charpentier.
+%%% Copyright (c) 2005 Dominic Williams, Nicolas Charpentier, Virgile Delecolle.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -237,3 +237,15 @@ continue_after_compile_error_test() ->
 	      [{acceptance,0,0},{unit,0,0},{modules,1,1}] = xpdojo:test_files (Dir)
       end).
       
+custom_report_function_test() ->
+    Options = 
+	[{report_function, fun my_report_function/1}],
+    use_and_purge_tree (
+      [bad_foo()],
+      fun (Dir,_) ->
+	      [{modules,1,0}] = xpdojo:test_files (Dir, Options),
+	      "toto" = get(compile)
+      end).
+
+my_report_function ({Phase, Term}) ->
+   put(Phase, Term).
