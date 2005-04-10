@@ -237,15 +237,34 @@ continue_after_compile_error_test() ->
 	      [{acceptance,0,0},{unit,0,0},{modules,1,1}] = xpdojo:test_files (Dir)
       end).
       
-custom_report_function_test() ->
+custom_report_function_compile_error_test() ->
     Options = 
 	[{report_function, fun my_report_function/1}],
     use_and_purge_tree (
       [bad_foo()],
       fun (Dir,_) ->
-	      [{modules,1,0}] = xpdojo:test_files (Dir, Options),
-	      "toto" = get(compile)
+	      [{modules, 1, 0}] = xpdojo:test_files (Dir, Options),
+	      Expected_filename = filename:join (Dir, "foo.erl"),
+	      ok = receive
+		       {compile, {error, Expected_filename, Errors, Warnings}} ->
+			   ok
+		   after 0 -> nok
+		   end
+      end).
+
+custom_report_function_compile_success_test() ->
+    Options = 
+	[{report_function, fun my_report_function/1}],
+    use_and_purge_tree (
+      [foo()],
+      fun (Dir,_) ->
+	      [{acceptance, 0, 0}, {unit, 0, 0}, {modules, 1, 1}] = xpdojo:test_files (Dir, Options),
+	      ok = receive
+		       {compile, {ok, foo, Warnings}} ->
+			   ok
+		   after 0 -> nok
+		   end
       end).
 
 my_report_function ({Phase, Term}) ->
-   put(Phase, Term).
+    self() ! {Phase, Term}.

@@ -217,9 +217,9 @@ is_below_directory2 (Path1, Path2) ->
     is_below_directory2 (tl (Path1), Path2).
 
 merge_options (Custom,Default) ->
-	Custom_dict = dict:from_list(Custom),
-	Default_dict = dict:from_list(Default),
-	dict:to_list(dict:merge(
-	   fun(_Key, Left,Right) -> Left end,
-	   Custom_dict,
-	   Default_dict)).
+    Custom_dict = dict:from_list (Custom),
+    Default_dict = dict:from_list (Default),
+    dict:to_list (dict:merge
+		  (fun (_Key, Left, _Right) -> Left end,
+		   Custom_dict,
+		   Default_dict)).
