@@ -237,4 +237,5 @@ is_below_directory_test() ->
 
 
 options_test() ->
-   [{titi, {1,2}}, {toto, "MYTOTO"}] = adlib:merge_options ([{toto, "MYTOTO"}], [{titi, {1,2}}, {toto, "MONTOTO"}]).
+   [{titi, {1,2}}, {toto, "MYTOTO"}] = adlib:update_options ([{toto, "MYTOTO"}], [{titi, {1,2}}, {toto, "MONTOTO"}]),
+   [{titi, {1,2}}] = adlib:update_options ([{toto, "MYTOTO"}], [{titi, {1,2}}]).
