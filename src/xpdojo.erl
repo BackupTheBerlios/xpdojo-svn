@@ -1,4 +1,5 @@
-%%% Copyright (c) Dominic Williams, Nicolas Charpentier, Virgile Delecolle.
+%%% Copyright (c) Dominic Williams, Nicolas Charpentier, Virgile Delecolle, 
+%%% Fabrice Nourisson.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -101,13 +102,14 @@ compile (Report_function) when is_function(Report_function) ->
 unit (Options) ->
     {value, {_,  Module_filter}} = lists:keysearch (unit_modules_filter, 1, Options),
     {value, {_,  Function_filter}} = lists:keysearch (unit_functions_filter, 1, Options),
-    unit (Module_filter, Function_filter).
+    {value, {_,  Report_function}} = lists:keysearch (report_function, 1, Options),
+    unit (Module_filter, Function_filter, Report_function).
 
-unit (Mod_filter, Fun_filter) ->
+unit (Mod_filter, Fun_filter, Report_function) ->
     fun({Total_module_count, Compiled_modules}) when length(Compiled_modules) < Total_module_count; Total_module_count == 0 ->
 	    [{modules, Total_module_count, Compiled_modules}];
        ({Total_module_count, Compiled_modules}) ->
-	    test_pass(Mod_filter, Fun_filter, Compiled_modules, unit, [{modules, Total_module_count, Compiled_modules}])
+	    test_pass(Mod_filter, Fun_filter, Report_function, Compiled_modules, unit, [{modules, Total_module_count, Compiled_modules}])
     end.
 
 acceptance ([{modules, Count, Compiled_modules}]) ->
@@ -115,17 +117,18 @@ acceptance ([{modules, Count, Compiled_modules}]) ->
 acceptance ([{unit, Total, Successes}, {modules, Count, Compiled_modules}]) when Successes < Total ->
     [{unit, Total, Successes}, {modules, Count, length (Compiled_modules)}];
 acceptance ([{unit, UnitTotal, UnitSuccesses}, {modules, Module_total, Compiled_modules}]) ->
-    test_pass (adlib:ends_with("_acceptance"), adlib:ends_with("_test"), Compiled_modules, acceptance,
+    test_pass (adlib:ends_with("_acceptance"), adlib:ends_with("_test"), fun(X) -> io:fwrite("~p~n",[X]) end, Compiled_modules, acceptance,
 	       [{unit, UnitTotal, UnitSuccesses}, {modules,Module_total,length(Compiled_modules)}]).
     
-test_pass (Module_filter, Function_filter, Modules, PassName, Acc) ->
+test_pass (Module_filter, Function_filter, Report_function, Modules, Pass_name, Acc) ->
     Tests = [X || X <- Modules, Module_filter(X)],
     {Total,Failures} = testing:run_modules (Tests, Function_filter),
-    report(Failures),
-    [{PassName, Total, Total- length (Failures)} | Acc ].
+    report(Failures, Pass_name, Report_function),
+    [{Pass_name, Total, Total- length (Failures)} | Acc ].
     
-report([]) ->
+report ([], _Pass_name, _Report_function) ->
     ok;
-report([H|T]) ->
-    io:fwrite("~p~n",[H]),
-    report(T).
+report ([H|T], Pass_name, Report_function) ->
+    Report_function ({Pass_name, {error, H}}),
+%     io:fwrite("~p~n",[H]),
+    report (T, Pass_name, Report_function).

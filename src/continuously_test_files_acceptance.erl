@@ -1,4 +1,5 @@
-%%% Copyright (c) 2005 Dominic Williams, Nicolas Charpentier, Virgile Delecolle.
+%%% Copyright (c) 2005 Dominic Williams, Nicolas Charpentier, Virgile Delecolle, 
+%%% Fabrice Nourisson.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -255,7 +256,7 @@ custom_report_function_compile_error_test() ->
 	      ok = receive
 		       {compile, {error, Expected_filename, Errors, Warnings}} ->
 			   ok
-		   after 0 -> nok
+		   after 0 -> message_not_found
 		   end
       end).
 
@@ -267,12 +268,28 @@ custom_report_function_compile_success_test() ->
       fun (Dir,_) ->
 	      [{acceptance, 0, 0}, {unit, 0, 0}, {modules, 1, 1}] = xpdojo:test_files (Dir, Options),
 	      ok = receive
-		       %{compile, {ok, foo, Warnings}} ->
+		       {compile, {ok, File, Warnings}} ->
+			   ok;
 		       Message ->
-			   ok
-		   after 0 -> nok
+			   Message
+		   after 0 -> message_not_found
 		   end
       end).
+
+custom_report_function_unit_error_test() ->
+    Options = 
+	[{report_function, fun my_report_function/1}],
+    use_and_purge_tree (
+      [bad_foo_ut()],
+      fun(Dir,_)->
+	      [{unit, 1, 0}, {modules, 1, 1}] = xpdojo:test_files (Dir, Options),
+	      ok = receive
+		       {unit, {error, Errors}} -> % the file/module would be nice :)
+			   ok
+		   after 0 -> message_not_found
+		   end
+      end).
+
 
 my_report_function ({Phase, Term}) ->
     self() ! {Phase, Term}.
