@@ -219,9 +219,9 @@ is_below_directory2 (Path1, Path2) ->
 update_options (Custom,Default) ->
     Custom_dict = dict:from_list (Custom),
     Default_dict = dict:from_list (Default),
-    CustomFiltered_dict = dict:filter
-			  (fun(Key,Value) -> dict:is_key(Key,Default_dict) end,
-			   Custom_dict),
+    CustomFiltered_dict = 
+	dict:filter (fun (Key,_Value) -> dict:is_key (Key, Default_dict) end,
+		     Custom_dict),
     dict:to_list (dict:merge
 		  (fun (_Key, Left, _Right) -> Left end,
 		   CustomFiltered_dict,

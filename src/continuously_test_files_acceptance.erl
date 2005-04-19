@@ -84,11 +84,17 @@ baz() ->
       "-export([run/0]).",
       "run() -> yohoho."]}.
 
+silent_report(X) ->
+    ok.
+
+options() ->
+    [{report_function, fun silent_report/1}].
+
 directory_empty_test() ->
     use_and_purge_tree (
       [],
       fun(Dir,_) ->
-	      no_source_files = xpdojo:test_files (Dir)
+	      no_source_files = xpdojo:test_files (Dir, options())
       end).
 
 tree_without_code() ->
@@ -105,42 +111,42 @@ tree_without_code_test() ->
     use_and_purge_tree (
       tree_without_code(),
       fun (Dir,_) ->
-	      no_source_files = xpdojo:test_files (Dir)
+	      no_source_files = xpdojo:test_files (Dir, options())
       end).
 
 single_module_test() ->
     use_and_purge_tree (
       [foo()],
       fun (Dir,_) ->
-	      [{acceptance,0,0}, {unit,0,0}, {modules,1,1}] = xpdojo:test_files (Dir)
+	      [{acceptance,0,0}, {unit,0,0}, {modules,1,1}] = xpdojo:test_files (Dir, options())
       end).
 
 multi_module_test() ->
     use_and_purge_tree (
       [foo(), bad_bar(), baz()],
       fun (Dir,_) ->
-	      [{modules,3,2}] = xpdojo:test_files (Dir)
+	      [{modules,3,2}] = xpdojo:test_files (Dir, options())
       end).
 
 single_module_with_unit_test() ->
     use_and_purge_tree (
       [foo(), foo_ut()],
       fun (Dir,_) ->
-	      [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir)
+	      [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir, options())
       end).
 
 multi_module_with_one_failing_unit_test() ->
     use_and_purge_tree (
       [foo(), foo_ut(), bar(), bad_bar_ut()],
       fun (Dir,_) ->
-	      [{unit,2,1}, {modules,4,4}] = xpdojo:test_files (Dir)
+	      [{unit,2,1}, {modules,4,4}] = xpdojo:test_files (Dir, options())
       end).
 
 failing_build_bails_out_test() ->
     use_and_purge_tree (
       [foo(), bad_bar(), baz(), foo_ut()],
       fun (Dir,_) ->
-	      [{modules,4,3}] = xpdojo:test_files (Dir)
+	      [{modules,4,3}] = xpdojo:test_files (Dir, options())
       end).
 
 foo_more_utt() ->
@@ -160,9 +166,10 @@ foo_utt() ->
       "toto_test() -> ok = foo:bar()."]}.
 
 custom_unit_filters_test() ->
-    Options = 
+    Options =
 	[{unit_modules_filter, adlib:ends_with("_utt")},
-	 {unit_functions_filter, adlib:ends_with("_tt")}],
+	 {unit_functions_filter, adlib:ends_with("_tt")},
+	 {report_function, fun silent_report/1}],
     use_and_purge_tree (
       [foo(), foo_ut(), foo_more_utt(), foo_utt()],
       fun (Dir,_) ->
@@ -180,32 +187,32 @@ single_failing_acceptance_test() ->
     use_and_purge_tree (
       [foo(), foo_acceptance()],
       fun (Dir,_) ->
-	      [{acceptance,1,0}, {unit,0,0}, {modules,2,2}] = xpdojo:test_files (Dir)
+	      [{acceptance,1,0}, {unit,0,0}, {modules,2,2}] = xpdojo:test_files (Dir, options())
       end).
 
 reload_changed_file_test() ->    
     use_and_purge_tree (
       [foo(), foo_ut()],
       fun (Dir,_) ->
-	      [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir),
+	      [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir, options()),
 	      timer:sleep(2000),
 	      file:write_file(filename:join(Dir,"foo_ut.erl"),
 			      "-module(foo_ut).\n"
 			      "-export([foo_test/0]).\n"
 			      "foo_test() -> nok = foo:bar()."),
-	      [{unit,1,0}, {modules,2,2}] = xpdojo:test_files (Dir)
+	      [{unit,1,0}, {modules,2,2}] = xpdojo:test_files (Dir, options())
       end).
 
 add_module_to_directory_test() ->
     use_and_purge_tree (
       [foo(), foo_ut()],
       fun (Dir,_) ->
-	      [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir),
+	      [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir, options()),
 	      file:write_file(filename:join(Dir,"bar.erl"),
 			      "-module(bar).\n"
 			      "-export([foo/0]).\n"
 			      "foo() -> yohoho."),
-	      [{acceptance,0,0}, {unit,1,1}, {modules,3,3}] = xpdojo:test_files (Dir)
+	      [{acceptance,0,0}, {unit,1,1}, {modules,3,3}] = xpdojo:test_files (Dir, options())
       end).
 
 unchanged_test() ->
@@ -214,27 +221,27 @@ unchanged_test() ->
        {directory,"src",[foo(),bar()]},
        {directory,"unit",[foo_ut(), bar_ut()]}],
       fun (Dir,_) ->
-	      [{acceptance,1,0}, {unit,2,2}, {modules,5,5}] = xpdojo:test_files (Dir),
-	      unchanged = xpdojo:test_files (Dir)
+	      [{acceptance,1,0}, {unit,2,2}, {modules,5,5}] = xpdojo:test_files (Dir, options()),
+	      unchanged = xpdojo:test_files (Dir, options())
       end).
     
 continue_after_compile_error_test() ->
     use_and_purge_tree (
       [foo()],
       fun (Dir,_) ->
-	      [{acceptance,0,0},{unit,0,0},{modules,1,1}] = xpdojo:test_files (Dir),
+	      [{acceptance,0,0},{unit,0,0},{modules,1,1}] = xpdojo:test_files (Dir, options()),
 	      timer:sleep(2000),
 	      file:write_file(filename:join(Dir,"foo.erl"),
 			      "-module(foo).\n"
 			      "-export([yo/0]).\n"
 			      "yo() - yohoho."),
-	      [{modules,1,0}] = xpdojo:test_files (Dir),
+	      [{modules,1,0}] = xpdojo:test_files (Dir, options()),
 	      timer:sleep(2000),
 	      file:write_file(filename:join(Dir,"foo.erl"),
 			      "-module(foo).\n"
 			      "-export([yo/0]).\n"
 			      "yo() -> yohoho."),
-	      [{acceptance,0,0},{unit,0,0},{modules,1,1}] = xpdojo:test_files (Dir)
+	      [{acceptance,0,0},{unit,0,0},{modules,1,1}] = xpdojo:test_files (Dir, options())
       end).
       
 custom_report_function_compile_error_test() ->
@@ -260,7 +267,8 @@ custom_report_function_compile_success_test() ->
       fun (Dir,_) ->
 	      [{acceptance, 0, 0}, {unit, 0, 0}, {modules, 1, 1}] = xpdojo:test_files (Dir, Options),
 	      ok = receive
-		       {compile, {ok, foo, Warnings}} ->
+		       %{compile, {ok, foo, Warnings}} ->
+		       Message ->
 			   ok
 		   after 0 -> nok
 		   end

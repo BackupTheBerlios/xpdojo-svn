@@ -99,3 +99,20 @@ compile_all_kind_test() ->
 	      {{compiled, [foo]}, {failed, [other_bad_foo,bad_foo]}} = compiling:compile (Dir, [filename:join (Dir, X ) || X <- ["foo.erl","bad_foo.erl","other_bad_foo.erl"]])
       end).
     
+compile_with_report_function_test() ->
+    use_and_purge_tree (
+      [{file, "foo.erl", "-module(foo).\nbla() -."}],
+      fun (Dir, _) ->
+	      Signature = now(),
+	      compiling:compile (Dir, [filename:join(Dir, "foo.erl")],
+				 fun(Result) ->
+					 self() ! {Signature, Result} end),
+	      ok = receive
+		       {Signature, Result} ->
+			   ok
+		   after 100 ->
+			   nok
+		   end
+      end).
+	 
+    

@@ -32,17 +32,20 @@
 
 default_options() ->
     [{unit_modules_filter, adlib:ends_with("ut")},
-     {unit_functions_filter, adlib:ends_with("test")}].
+     {unit_functions_filter, adlib:ends_with("test")},
+     {report_function, fun ({Phase, Term}) -> io:fwrite("~p: ~p~n", [Phase, Term]) end}].
 
 test_files (Directory) ->
     test_files(Directory, default_options()).
 
 test_files(Directory, Options) ->
-    Unit = unit (Options),
+    All_options = adlib:update_options (Options, default_options ()),
+    Unit = unit (All_options),
+    Compile = compile (All_options),
     with (Directory,
 	  [fun find_modules/2,
 	   fun find_differences/2,
-	   fun(Dir, Files) -> compiling:compile(Dir, Files) end,
+	   Compile,
 	   fun post_compile/2,
 	   fun (_Dir2, Modules) -> acceptance(Unit(Modules)) end],
 	  []).
@@ -89,6 +92,12 @@ find_differences (Directory, Files) ->
 	    Files
     end.
 
+compile (Options) when is_list (Options) ->
+    {value, {_,  Report_function}} = lists:keysearch (report_function, 1, Options),
+    compile (Report_function);
+compile (Report_function) when is_function(Report_function) ->
+    fun (Dir, Files) -> compiling:compile (Dir, Files, Report_function) end.
+    
 unit (Options) ->
     {value, {_,  Module_filter}} = lists:keysearch (unit_modules_filter, 1, Options),
     {value, {_,  Function_filter}} = lists:keysearch (unit_functions_filter, 1, Options),

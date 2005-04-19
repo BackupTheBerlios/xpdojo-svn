@@ -30,6 +30,7 @@
 -export ([modules_from_directory/2, differences/2, differences/3, file_time/1, module_time/1]).
 -export ([source_of_module/1, purge_modules_from_directory/1, loaded_modules/0, loaded_modules/1]).
 -export ([compile/2]).
+-export ([compile/3]).
 
 -include_lib("kernel/include/file.hrl").
 
@@ -111,14 +112,21 @@ module_name (File) ->
     list_to_atom (filename:basename (File, ".erl")).
 
 compile (Dir, List) ->
-    compile (Dir, List, {[], []}).
+    compile (Dir, List, fun(X) -> io:fwrite("~p~n",[X]) end).
+				
+compile (Dir, List, Report_function) ->
+    compile (Dir, List, Report_function, {[], []}).
 
-compile (_Dir, [], {Compiled, Failed}) ->
+compile (_Dir, [], _Fun, {Compiled, Failed}) ->
     {{compiled, Compiled}, {failed, Failed}};
-compile (Dir, [File|T], Acc) ->
-    compile (Dir, T, classify_by_result (compile:file(File), File, Acc)).
+compile (Dir, [File|T], Report_function, Acc) ->
+    compile (Dir, T, Report_function,
+	     classify_by_result (Report_function, compile:file(File, [return]), File, Acc)).
 
-classify_by_result ({ok, Module}, _File, {Compiled, Failed}) ->
+classify_by_result (Report_function, {ok, Module, Warnings}, File, {Compiled, Failed}) ->
+    Report_function ({compile, {ok, File, Warnings}}),
     {[Module|Compiled], Failed};
-classify_by_result (error, File, {Compiled, Failed}) ->
+classify_by_result (Report_function, {error,Errors,Warnings}, File, {Compiled, Failed}) ->
+    Report_function ({compile, {error, File, Errors, Warnings}}),
     {Compiled, [module_name (File) | Failed]}.
+
