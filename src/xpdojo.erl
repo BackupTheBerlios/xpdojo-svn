@@ -132,3 +132,4 @@ report ([H|T], Pass_name, Report_function) ->
     Report_function ({Pass_name, {error, H}}),
 %     io:fwrite("~p~n",[H]),
     report (T, Pass_name, Report_function).
+

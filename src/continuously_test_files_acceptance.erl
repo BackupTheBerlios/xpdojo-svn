@@ -1,5 +1,5 @@
 %%% Copyright (c) 2005 Dominic Williams, Nicolas Charpentier, Virgile Delecolle, 
-%%% Fabrice Nourisson.
+%%% Fabrice Nourisson, Jacques Couvreur.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -226,6 +226,57 @@ unchanged_test() ->
 	      unchanged = xpdojo:test_files (Dir, options())
       end).
     
+continuous_tester_test() ->
+    use_and_purge_tree (
+      [foo(), foo_ut()],
+      fun (Dir,_) ->
+	      Timeout = 1000,
+	      Key = now(),
+	      Self = self(),
+	      Notification = fun ( Message ) ->
+					   Self ! {Key,Message}
+			     end,
+	      testing_server:start(Dir,Notification,options()),
+	      ok = receive 
+		       {Key,[{acceptance,0,0}, {unit,1,1}, {modules,2,2}]} ->
+			   ok;
+		       Other ->
+			   {other_message,Other}
+		   after Timeout ->
+			   first_timeout
+		   end,
+	      ok = receive 
+		       _ ->
+			   unexpected_message
+		   after Timeout ->
+			   ok
+		   end,
+	      file:write_file(filename:join(Dir,"bar.erl"),
+			      "-module(bar).\n"
+			      "-export([foo/0]).\n"
+			      "foo() -> yohoho."),	      
+	      
+	      ok = receive 
+		       {Key,[{acceptance,0,0}, {unit,1,1}, {modules,3,3}]} ->
+			   ok;
+		       _ ->
+			   still_other_message
+		   after Timeout ->
+			   second_timeout
+		   end,
+	      testing_server:stop(),
+	      file:write_file(filename:join(Dir,"pepe.erl"),
+			      "-module(pepe).\n"
+			      "-export([juan/0]).\n"
+			      "juan() -> hola."),	      
+	      ok = receive 
+		       _ ->
+			   unexpected_message
+		   after Timeout ->
+			   ok
+		   end
+	      end).
+
 continue_after_compile_error_test() ->
     use_and_purge_tree (
       [foo()],
@@ -283,6 +334,11 @@ custom_report_function_unit_error_test() ->
       [bad_foo_ut()],
       fun(Dir,_)->
 	      [{unit, 1, 0}, {modules, 1, 1}] = xpdojo:test_files (Dir, Options),
+	      ok = receive
+		       {compile, _} ->
+			   ok
+		   after 0 -> message_not_found
+		   end,
 	      ok = receive
 		       {unit, {error, Errors}} -> % the file/module would be nice :)
 			   ok
