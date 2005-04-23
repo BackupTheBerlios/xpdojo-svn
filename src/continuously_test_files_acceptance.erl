@@ -29,7 +29,7 @@
 
 -module(continuously_test_files_acceptance).
 -compile(export_all).
--import(testing, [use_and_purge_tree/2]).
+-import(testing, [use_and_purge_tree/2,use_and_purge_relative_tree/2]).
 
 bad_foo() ->
     {file,"foo.erl",
@@ -66,6 +66,7 @@ bar() ->
      ["-module(bar).",
       "-export([foo/0]).",
       "foo() -> ok."]}.
+
 
 bad_bar_ut() ->
     {file,"bar_ut.erl",
@@ -226,6 +227,16 @@ unchanged_test() ->
 	      unchanged = xpdojo:test_files (Dir, options())
       end).
     
+unchanged_for_relative_test() ->
+    use_and_purge_relative_tree (
+      [foo_acceptance(),
+       {directory,"src",[foo(),bar()]},
+       {directory,"unit",[foo_ut(), bar_ut()]}],
+      fun (Dir,_) ->
+	      [{acceptance,1,0}, {unit,2,2}, {modules,5,5}] = xpdojo:test_files (Dir, options()),
+	      unchanged = xpdojo:test_files (Dir, options())
+      end).
+
 continuous_tester_test() ->
     use_and_purge_tree (
       [foo(), foo_ut()],

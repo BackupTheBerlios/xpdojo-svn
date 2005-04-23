@@ -28,7 +28,7 @@
 
 -module(compiling_ut).
 -compile(export_all).
--import(testing, [use_and_purge_tree/2]).
+-import(testing, [use_and_purge_tree/2,use_and_purge_relative_tree/2]).
 
 bar() ->
     {file,"bar.erl",
@@ -49,6 +49,19 @@ source_of_module_test () ->
 modules_from_directory_test() ->
     [] = compiling:modules_from_directory ([], ""),
     use_and_purge_tree (
+      [{directory, "src", [bar()]},
+       {directory, "build", []}],
+      fun(Dir,_) ->
+	      Src_dir = filename:join (Dir, "src"),
+	      Build_dir = filename:join (Dir, "build"),
+	      compile:file (filename:join (Src_dir,"bar"), [{outdir, Build_dir}]),
+	      code:load_abs (filename:join (Build_dir, "bar")),
+	      [bar] = compiling:modules_from_directory (compiling:loaded_modules (), Src_dir)
+      end).
+
+modules_from_relative_directory_test() ->
+    [] = compiling:modules_from_directory ([], ""),
+    use_and_purge_relative_tree (
       [{directory, "src", [bar()]},
        {directory, "build", []}],
       fun(Dir,_) ->

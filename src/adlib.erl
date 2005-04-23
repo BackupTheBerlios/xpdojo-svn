@@ -35,6 +35,9 @@
 -export([accumulate_if/3, accumulate_unless/3, is_below_directory/2]).
 -export([update_options/2]).
 
+-export([unique_string/0]).
+
+
 -include_lib("kernel/include/file.hrl").
 
 first (Predicate, List) ->

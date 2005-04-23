@@ -54,12 +54,24 @@ loaded_modules (Dir) ->
     modules_from_directory (loaded_modules(), Dir).
 
 modules_from_directory (Modules, Directory) ->
+    modules_from_directory(filename:pathtype(Directory),Modules,Directory).
+
+modules_from_directory (relative,Modules, Directory) ->
+    {ok, Current } = file:get_cwd(),
+    RelativeDirectory = string:concat(string:concat(Current,"/"),Directory),
     lists:foldl (
       fun (Module, Acc) ->
-	      adlib:accumulate_if (adlib:is_below_directory (source_of_module (Module), Directory), Module, Acc)
+ 	      adlib:accumulate_if (adlib:is_below_directory (source_of_module (Module), RelativeDirectory), Module, Acc)
       end,
       [],
-      Modules).
+      Modules);
+modules_from_directory (_,Modules, Directory) ->
+     lists:foldl (
+       fun (Module, Acc) ->
+	       adlib:accumulate_if (adlib:is_below_directory (source_of_module (Module), Directory), Module, Acc)
+       end,
+       [],
+       Modules).
 
 module_time (Module) ->
     file_time (element (2, code:is_loaded (Module))).
