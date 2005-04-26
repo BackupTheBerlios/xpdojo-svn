@@ -1,4 +1,5 @@
-%%% Copyright (c) 2004 Dominic Williams, Nicolas Charpentier, Virgile Delecolle.
+%%% Copyright (c) Dominic Williams, Nicolas Charpentier, Virgile Delecolle, 
+%%% Fabrice Nourisson, Jacques Couvreur.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -34,9 +35,6 @@
 -export([fold_files/4]).
 -export([accumulate_if/3, accumulate_unless/3, is_below_directory/2]).
 -export([update_options/2]).
-
--export([unique_string/0]).
-
 
 -include_lib("kernel/include/file.hrl").
 

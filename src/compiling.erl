@@ -1,4 +1,5 @@
-%%% Copyright (c) Dominic Williams, Nicolas Charpentier.
+%%% Copyright (c) Dominic Williams, Nicolas Charpentier, Virgile Delecolle, 
+%%% Fabrice Nourisson, Jacques Couvreur.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -54,13 +55,6 @@ loaded_modules (Dir) ->
     modules_from_directory (loaded_modules(), Dir).
 
 modules_from_directory (Modules, Directory) ->
-    modules_from_directory(filename:pathtype(Directory),Modules,Directory).
-
-modules_from_directory (relative,Modules, Directory) ->
-    {ok, Current } = file:get_cwd(),
-    AbsoluteDirectory = string:concat(string:concat(Current,"/"),Directory),
-    modules_from_directory (absolute,Modules,AbsoluteDirectory);
-modules_from_directory (_,Modules, Directory) ->
      lists:foldl (
        fun (Module, Acc) ->
 	       adlib:accumulate_if (adlib:is_below_directory (source_of_module (Module), Directory), Module, Acc)

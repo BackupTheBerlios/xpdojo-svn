@@ -1,5 +1,5 @@
 %%% Copyright (c) Dominic Williams, Nicolas Charpentier, Virgile Delecolle, 
-%%% Fabrice Nourisson.
+%%% Fabrice Nourisson, Jacques Couvreur.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -40,10 +40,11 @@ test_files (Directory) ->
     test_files(Directory, default_options()).
 
 test_files(Directory, Options) ->
+    Dir = filename:absname(Directory),
     All_options = adlib:update_options (Options, default_options ()),
     Unit = unit (All_options),
     Compile = compile (All_options),
-    with (Directory,
+    with (Dir,
 	  [fun find_modules/2,
 	   fun find_differences/2,
 	   Compile,

@@ -1,4 +1,5 @@
-%%% Copyright (c) Dominic Williams, Nicolas Charpentier.
+%%% Copyright (c) Dominic Williams, Nicolas Charpentier, Virgile Delecolle, 
+%%% Fabrice Nourisson, Jacques Couvreur.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -27,7 +28,7 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(testing).
--export([run_functions/1, run_modules/2, use_and_purge_tree/2,use_and_purge_relative_tree/2]).
+-export([run_functions/1, run_modules/2, use_and_purge_tree/2]).
 
 run_functions(Functions) when list(Functions) ->
     lists:foldl(
@@ -53,15 +54,6 @@ select_test_functions(Module,Pattern) when atom(Module), function(Pattern) ->
 use_and_purge_tree (Tree, Fun) ->
     adlib:use_tree (
       adlib:temporary_pathname(),
-      Tree,
-      Fun,
-      fun (Dir, _) ->
-	      compiling:purge_modules_from_directory (Dir)
-      end).
-
-use_and_purge_relative_tree (Tree, Fun) ->
-    adlib:use_tree (
-      adlib:unique_string(),
       Tree,
       Fun,
       fun (Dir, _) ->

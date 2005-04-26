@@ -1,4 +1,5 @@
-%%% Copyright (c) Dominic Williams, Nicolas Charpentier.
+%%% Copyright (c) Dominic Williams, Nicolas Charpentier, Virgile Delecolle, 
+%%% Fabrice Nourisson, Jacques Couvreur.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -49,19 +50,6 @@ source_of_module_test () ->
 modules_from_directory_test() ->
     [] = compiling:modules_from_directory ([], ""),
     use_and_purge_tree (
-      [{directory, "src", [bar()]},
-       {directory, "build", []}],
-      fun(Dir,_) ->
-	      Src_dir = filename:join (Dir, "src"),
-	      Build_dir = filename:join (Dir, "build"),
-	      compile:file (filename:join (Src_dir,"bar"), [{outdir, Build_dir}]),
-	      code:load_abs (filename:join (Build_dir, "bar")),
-	      [bar] = compiling:modules_from_directory (compiling:loaded_modules (), Src_dir)
-      end).
-
-modules_from_relative_directory_test() ->
-    [] = compiling:modules_from_directory ([], ""),
-    use_and_purge_relative_tree (
       [{directory, "src", [bar()]},
        {directory, "build", []}],
       fun(Dir,_) ->
