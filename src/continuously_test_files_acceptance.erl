@@ -233,12 +233,12 @@ unchanged_for_relative_test() ->
        {directory,"src",[foo(),bar()]},
        {directory,"unit",[foo_ut(), bar_ut()]}],
       fun (Dir,_) ->
-	      Current = file:get_cwd(),
+	      {ok, Current} = file:get_cwd(),
 	      Relative = filename:basename (Dir),
 	      file:set_cwd(filename:dirname(Dir)),
 	      [{acceptance,1,0}, {unit,2,2}, {modules,5,5}] = xpdojo:test_files (Relative, options()),
 	      unchanged = xpdojo:test_files (Relative, options()),
-	      file:set_cwd(Current)
+		  ok = file:set_cwd(Current)
       end).
 
 continuous_tester_test() ->
