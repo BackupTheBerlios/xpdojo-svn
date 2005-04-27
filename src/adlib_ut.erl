@@ -239,3 +239,7 @@ is_below_directory_test() ->
 options_test() ->
    [{titi, {1,2}}, {toto, "MYTOTO"}] = adlib:update_options ([{toto, "MYTOTO"}], [{titi, {1,2}}, {toto, "MONTOTO"}]),
    [{titi, {1,2}}] = adlib:update_options ([{toto, "MYTOTO"}], [{titi, {1,2}}]).
+
+normalise_path_test() ->
+	"Toto/titi" = adlib:normalise_path("Toto/titi"),
+	"Toto/titi" = adlib:normalise_path("Toto/./titi").

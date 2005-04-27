@@ -1,11 +1,11 @@
-%%% Copyright (c) Dominic Williams, Nicolas Charpentier, Virgile Delecolle, 
+%%% Copyright (c) Dominic Williams, Nicolas Charpentier, Virgile Delecolle,
 %%% Fabrice Nourisson, Jacques Couvreur.
 %%% All rights reserved.
-%%% 
+%%%
 %%% Redistribution and use in source and binary forms, with or without
 %%% modification, are permitted provided that the following conditions are
 %%% met:
-%%% 
+%%%
 %%% * Redistributions of source code must retain the above copyright
 %%%   notice, this list of conditions and the following disclaimer.
 %%% * Redistributions in binary form must reproduce the above copyright
@@ -14,7 +14,7 @@
 %%% * The names of the authors may not be used to endorse or promote
 %%%   products derived from this software without specific prior written
 %%%   permission.
-%%% 
+%%%
 %%% THIS SOFTWARE IS PROVIDED BY THE AUTHORS "AS IS" AND ANY EXPRESS OR
 %%% IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 %%% WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -35,6 +35,7 @@
 -export([fold_files/4]).
 -export([accumulate_if/3, accumulate_unless/3, is_below_directory/2]).
 -export([update_options/2]).
+-export([normalise_path/1]).
 
 -include_lib("kernel/include/file.hrl").
 
@@ -65,21 +66,21 @@ use_tree(Dir,Tree,Fun) ->
 use_tree (Dir, Tree, Use_fun, Cleanup_fun) ->
     adlib:make_tree(Dir,Tree),
     LastCall = case catch Use_fun(Dir,Tree) of
-		   {'EXIT',Reason} ->
-		       fun() -> exit(Reason) end;
-		   Result ->
-		       fun() -> Result end
-	       end,
+				   {'EXIT',Reason} ->
+					   fun() -> exit(Reason) end;
+				   Result ->
+					   fun() -> Result end
+			   end,
     Cleanup_fun (Dir, Tree),
     adlib:delete_tree(Dir),
     LastCall().
-    
+
 temporary_pathname() ->
     Possible_roots = [os:getenv(X) || X <- ["TMP","TEMP","HOME"], os:getenv(X)/=false],
     {ok, {Root,_}} =
-	first(
-	  fun(X) -> filelib:is_dir(X) end,
-	  Possible_roots),
+		first(
+		  fun(X) -> filelib:is_dir(X) end,
+		  Possible_roots),
     Pathname = filename:join(Root,unique_string()),
     {error,enoent} = file:read_file_info(Pathname),
     Pathname.
@@ -105,7 +106,7 @@ populate(_,[]) ->
 normalise([H|[]]) ->
     H;
 normalise([H|T]) when list(H) ->
-						% Inserts newlines when list of strings...
+												% Inserts newlines when list of strings...
     normalise([string:concat(H,string:concat("\n",hd(T)))|tl(T)]);
 normalise([String]) when list(String) ->
     String;
@@ -115,15 +116,15 @@ normalise(String) when list(String) ->
 depopulate(Directory) ->
     {ok, Filename_list} = file:list_dir(Directory),
     Delete = fun(Filename) ->
-		     Pathname = filename:join(Directory,Filename),
-		     {ok,File_info} = file:read_file_info(Pathname),
-		     case File_info#file_info.type of
-			 directory ->
-			     delete_tree(Pathname);
-			 regular ->
-			     ok = file:delete(Pathname)
-		     end
-	     end,
+					 Pathname = filename:join(Directory,Filename),
+					 {ok,File_info} = file:read_file_info(Pathname),
+					 case File_info#file_info.type of
+						 directory ->
+							 delete_tree(Pathname);
+						 regular ->
+							 ok = file:delete(Pathname)
+					 end
+			 end,
     lists:foreach(Delete,Filename_list).
 
 unique(List) ->
@@ -146,9 +147,9 @@ accumulate_if (false, _Item, List) ->
 strip_whitespace(String) when list(String) ->
     lists:filter(
       fun($\s) -> false;
-	 ($\n) -> false;
-	 ($\t) -> false;
-	 (Other) when integer(Other) -> true
+		 ($\n) -> false;
+		 ($\t) -> false;
+		 (Other) when integer(Other) -> true
       end,
       String).
 
@@ -172,26 +173,26 @@ begins_with([],[]) ->
 
 ends_with(Ending) ->
     fun(String) ->
-	    ends_with(String,Ending)
+			ends_with(String,Ending)
     end.
 
 begins_with(Token) ->
     fun(String) ->
-	    begins_with(String,Token)
+			begins_with(String,Token)
     end.
 
 fold_files(Root,Action,Options,Acc) when list(Root) ->
     {ok,Content} = file:list_dir(Root),
     lists:foldl(fun(Item,Acc2) ->
-			[Type] = xray(Root,Item,[type],[]),
-			fold_files(Type,Root,Item,Options,Action,Acc2)
-		end,
-		Acc,
-		Content).
+						[Type] = xray(Root,Item,[type],[]),
+						fold_files(Type,Root,Item,Options,Action,Acc2)
+				end,
+				Acc,
+				Content).
 
 fold_files(directory,Root,Item,Options,Action,Acc) ->
     fold_files(filename:join(Root,Item),Action,Options,
-	       Action(xray(Root,Item,Options,[]),Acc));
+			   Action(xray(Root,Item,Options,[]),Acc));
 fold_files(_Type,Root,Item,Options,Action,Acc) ->
     Action(xray(Root,Item,Options,[]),Acc).
 
@@ -206,7 +207,7 @@ xray(Root,Item,[extension|T],Acc) ->
     xray(Root,Item,T,[filename:extension(Item)|Acc]);
 xray(_,_,[],Acc) ->
     lists:reverse(Acc).
-    
+
 is_below_directory (Path1, Path2) ->
     is_below_directory2 (lists:reverse (filename:split (Path1)), lists:reverse (filename:split(Path2))).
 
@@ -220,10 +221,15 @@ is_below_directory2 (Path1, Path2) ->
 update_options (Custom,Default) ->
     Custom_dict = dict:from_list (Custom),
     Default_dict = dict:from_list (Default),
-    CustomFiltered_dict = 
-	dict:filter (fun (Key,_Value) -> dict:is_key (Key, Default_dict) end,
-		     Custom_dict),
+    CustomFiltered_dict =
+		dict:filter (fun (Key,_Value) -> dict:is_key (Key, Default_dict) end,
+					 Custom_dict),
     dict:to_list (dict:merge
-		  (fun (_Key, Left, _Right) -> Left end,
-		   CustomFiltered_dict,
-		   Default_dict)).
+				  (fun (_Key, Left, _Right) -> Left end,
+				   CustomFiltered_dict,
+				   Default_dict)).
+
+normalise_path(Path) ->
+    filename:join(lists:filter(fun (".") -> false;
+								   (_) -> true end,
+							   filename:split(Path))).
