@@ -229,7 +229,14 @@ update_options (Custom,Default) ->
 				   CustomFiltered_dict,
 				   Default_dict)).
 
+path_filter ([_,".."|Tail],Acc) ->
+	path_filter (Tail,Acc);
+path_filter (["."|Tail],Acc) ->
+	path_filter (Tail,Acc);
+path_filter ([Var|Tail],Acc) ->
+	[Var|path_filter (Tail,Acc)];
+path_filter ([],Acc) ->
+	Acc.
+
 normalise_path(Path) ->
-    filename:join(lists:filter(fun (".") -> false;
-								   (_) -> true end,
-							   filename:split(Path))).
+    filename:join(path_filter(filename:split(Path),[])).

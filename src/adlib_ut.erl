@@ -242,4 +242,5 @@ options_test() ->
 
 normalise_path_test() ->
 	"Toto/titi" = adlib:normalise_path("Toto/titi"),
-	"Toto/titi" = adlib:normalise_path("Toto/./titi").
+	"Toto/titi" = adlib:normalise_path("Toto/./titi"),
+	"Foo/bar" = adlib:normalise_path ("./Bla/../Foo/bar/titi/..").
