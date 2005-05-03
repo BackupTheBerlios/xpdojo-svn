@@ -40,7 +40,7 @@ test_files (Directory) ->
     test_files(Directory, default_options()).
 
 test_files(Directory, Options) ->
-    Dir = filename:absname(Directory),
+    Dir = adlib:normalise_path(filename:absname(Directory)),
     All_options = adlib:update_options (Options, default_options ()),
     Unit = unit (All_options),
     Compile = compile (All_options),

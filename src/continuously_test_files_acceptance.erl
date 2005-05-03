@@ -361,6 +361,16 @@ custom_report_function_unit_error_test() ->
 		   end
       end).
 
+unchanged_for_same_path_test() ->
+    use_and_purge_tree (
+      [foo_acceptance(),
+       {directory,"src",[foo(),bar()]},
+       {directory,"unit",[foo_ut(), bar_ut()]}],
+      fun (Dir,_) ->
+	      [{acceptance,1,0}, {unit,2,2}, {modules,5,5}] = xpdojo:test_files (Dir, options()),
+	      OtherDir = Dir ++ "/../" ++ filename:basename(Dir),
+	      unchanged = xpdojo:test_files (OtherDir, options())
+       end). 
 
 my_report_function ({Phase, Term}) ->
     self() ! {Phase, Term}.
