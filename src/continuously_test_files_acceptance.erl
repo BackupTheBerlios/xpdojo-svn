@@ -384,7 +384,7 @@ unchanged_for_same_path_test() ->
        {directory,"unit",[foo_ut(), bar_ut()]}],
       fun (Dir,_) ->
 	      [{acceptance,1,0}, {unit,2,2}, {modules,5,5}] = xpdojo:test_files (Dir, options()),
-	      OtherDir = Dir ++ "/../" ++ filename:basename(Dir),
+	      OtherDir = filename:join([Dir,"..",filename:basename(Dir)]),
 	      unchanged = xpdojo:test_files (OtherDir, options())
        end). 
 
