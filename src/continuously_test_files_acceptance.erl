@@ -1,5 +1,5 @@
-%%% Copyright (c) 2005 Dominic Williams, Nicolas Charpentier, Virgile Delecolle, 
-%%% Fabrice Nourisson, Jacques Couvreur.
+%%% Copyright (c) 2004-2005 Dominic Williams, Nicolas Charpentier,
+%%% Fabrice Nourisson, Jacques Couvreur, Virgile Delecolle.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -108,7 +108,7 @@ tree_without_code() ->
        {directory,"sub",
 	[{file, "truc", []},
 	 {file, "machin.o", []}]}]}].
-    
+
 tree_without_code_test() ->
     use_and_purge_tree (
       tree_without_code(),
@@ -184,7 +184,7 @@ foo_acceptance() ->
       "-export([bar_tt/0, toto_test/0]).",
       "bar_tt() -> ok = foo:bar().",
       "toto_test() -> hoho = foo:bar()."]}.
-    
+
 single_failing_acceptance_test() ->
     use_and_purge_tree (
       [foo(), foo_acceptance()],
@@ -226,7 +226,7 @@ unchanged_test() ->
 	      [{acceptance,1,0}, {unit,2,2}, {modules,5,5}] = xpdojo:test_files (Dir, options()),
 	      unchanged = xpdojo:test_files (Dir, options())
       end).
-    
+
 unchanged_for_relative_test() ->
     use_and_purge_tree (
       [foo_acceptance(),
@@ -238,7 +238,7 @@ unchanged_for_relative_test() ->
 	      file:set_cwd(filename:dirname(Dir)),
 	      [{acceptance,1,0}, {unit,2,2}, {modules,5,5}] = xpdojo:test_files (Relative, options()),
 	      unchanged = xpdojo:test_files (Relative, options()),
-		  ok = file:set_cwd(Current)
+	      ok = file:set_cwd(Current)
       end).
 
 continuous_tester_test() ->
@@ -249,7 +249,7 @@ continuous_tester_test() ->
 	      Key = now(),
 	      Self = self(),
 	      Notification = fun ( Message ) ->
-					   Self ! {Key,Message}
+				     Self ! {Key,Message}
 			     end,
 	      testing_server:start(Dir,Notification,options()),
 	      ok = receive 
@@ -270,7 +270,7 @@ continuous_tester_test() ->
 			      "-module(bar).\n"
 			      "-export([foo/0]).\n"
 			      "foo() -> yohoho."),	      
-	      
+
 	      ok = receive 
 		       {Key,[{acceptance,0,0}, {unit,1,1}, {modules,3,3}]} ->
 			   ok;
@@ -290,7 +290,7 @@ continuous_tester_test() ->
 		   after Timeout ->
 			   ok
 		   end
-	      end).
+      end).
 
 continue_after_compile_error_test() ->
     use_and_purge_tree (
@@ -310,55 +310,71 @@ continue_after_compile_error_test() ->
 			      "yo() -> yohoho."),
 	      [{acceptance,0,0},{unit,0,0},{modules,1,1}] = xpdojo:test_files (Dir, options())
       end).
-      
+
+
 custom_report_function_compile_error_test() ->
     Options = 
-	[{report_function, fun my_report_function/1}],
+ 	[{report_function, fun my_report_function/1}],
     use_and_purge_tree (
       [bad_foo()],
       fun (Dir,_) ->
-	      [{modules, 1, 0}] = xpdojo:test_files (Dir, Options),
-	      Expected_filename = filename:join (Dir, "foo.erl"),
-	      ok = receive
-		       {compile, {error, Expected_filename, Errors, Warnings}} ->
-			   ok
-		   after 0 -> message_not_found
-		   end
+ 	      [{modules, 1, 0}] = xpdojo:test_files (Dir, Options),
+ 	      Expected_filename = filename:join (Dir, "foo.erl"),
+ 	      ok = receive
+ 		       {compile, {error, Expected_filename, Errors, Warnings}} ->
+ 			   ok
+ 		   after 0 -> message_not_found
+ 		   end
       end).
 
 custom_report_function_compile_success_test() ->
     Options = 
-	[{report_function, fun my_report_function/1}],
+ 	[{report_function, fun my_report_function/1}],
     use_and_purge_tree (
       [foo()],
       fun (Dir,_) ->
-	      [{acceptance, 0, 0}, {unit, 0, 0}, {modules, 1, 1}] = xpdojo:test_files (Dir, Options),
-	      ok = receive
-		       {compile, {ok, File, Warnings}} ->
-			   ok;
-		       Message ->
-			   Message
-		   after 0 -> message_not_found
-		   end
+ 	      [{acceptance, 0, 0}, {unit, 0, 0}, {modules, 1, 1}] = xpdojo:test_files (Dir, Options),
+ 	      ok = receive
+ 		       {compile, {ok, File, Warnings}} ->
+ 			   ok;
+ 		       Message ->
+ 			   Message
+ 		   after 0 -> message_not_found
+ 		   end
       end).
 
 custom_report_function_unit_error_test() ->
     Options = 
-	[{report_function, fun my_report_function/1}],
+  	[{report_function, fun my_report_function/1}],
     use_and_purge_tree (
       [bad_foo_ut()],
       fun(Dir,_)->
-	      [{unit, 1, 0}, {modules, 1, 1}] = xpdojo:test_files (Dir, Options),
+  	      [{unit, 1, 0}, {modules, 1, 1}] = xpdojo:test_files (Dir, Options),
+	      ok = receive {compile,_} -> ok after 0 -> compile_message_not_found end,
+   	      ok = receive
+		       {unit, {error, foo_ut, Errors}} ->
+			   ok;
+		       Message ->
+			   Message
+   		   after 0 -> message_not_found
+   		   end
+      end).
+
+custom_report_function_unit_success_test() ->
+    Options = 
+	[{report_function, fun my_report_function/1}],
+    use_and_purge_tree (
+      [foo_ut()],
+      fun(Dir,_) ->
+	      [{acceptance, 0, 0}, {unit, 1, 1}, {modules, 1 ,1}] = xpdojo:test_files (Dir, Options),
+	      ok = receive {compile,_} -> ok after 0 -> compile_message_not_found end,
 	      ok = receive
-		       {compile, _} ->
-			   ok
+		       {unit, {ok, foo_ut}} -> 
+			   ok;
+		       Message ->
+			   Message
 		   after 0 -> message_not_found
-		   end,
-	      ok = receive
-		       {unit, {error, Errors}} -> % the file/module would be nice :)
-			   ok
-		   after 0 -> message_not_found
-		   end
+		   end					   
       end).
 
 unchanged_for_same_path_test() ->

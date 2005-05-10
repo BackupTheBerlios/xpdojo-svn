@@ -1,4 +1,5 @@
-%%% Copyright (c) Dominic Williams, Nicolas Charpentier.
+%%% Copyright (c) 2004-2005 Dominic Williams, Nicolas Charpentier,
+%%% Fabrice Nourisson, Jacques Couvreur, Virgile Delecolle.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -37,8 +38,10 @@ run_functions_test() ->
     pass.
 
 run_modules_test() ->
-    {2,[_Reason1]} = testing:run_modules([?MODULE], adlib:ends_with("_withfunnysuffix")),
-    {3,[_Reason2]} = testing:run_modules([?MODULE], adlib:begins_with("funnyprefixed_")),
+    [{?MODULE,2,[_Error]}] = 
+		testing:run_modules([?MODULE], adlib:ends_with("_withfunnysuffix")),
+    [{?MODULE,3,[_OtherError]}] = 
+		testing:run_modules([?MODULE], adlib:begins_with("funnyprefixed_")),
     pass.
 
 %% Dummy test functions (used to test the real functions)

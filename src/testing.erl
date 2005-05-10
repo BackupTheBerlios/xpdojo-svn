@@ -1,5 +1,5 @@
-%%% Copyright (c) Dominic Williams, Nicolas Charpentier, Virgile Delecolle, 
-%%% Fabrice Nourisson, Jacques Couvreur.
+%%% Copyright (c) 2004-2005 Dominic Williams, Nicolas Charpentier,
+%%% Fabrice Nourisson, Jacques Couvreur, Virgile Delecolle.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -39,14 +39,18 @@ run_functions(Functions) when list(Functions) ->
 		  _Other ->
 		      {Count+1,Errors}
 	      end
-      end, {0,[]}, Functions).
-
+      end, 
+      {0,[]}, 
+      Functions).
 run_modules(Modules,Pattern) when list(Modules) ->
     lists:foldl(
-      fun(Module, {Count,Errors}) ->
-	      {ModuleCount,ModuleErrors} = run_functions(select_test_functions(Module,Pattern)),
-	      {Count+ModuleCount,lists:append(ModuleErrors,Errors)}
-      end, {0,[]}, Modules).
+       fun(Module, Acc) ->
+	      {FunctionCount,ModuleErrors} = run_functions(select_test_functions(Module,Pattern)),
+%		  Results = run_functions(select_test_functions(Module,Pattern)),
+	      [{Module, FunctionCount, ModuleErrors} | Acc]
+      end, 
+	  [], 
+	  Modules).
 
 select_test_functions(Module,Pattern) when atom(Module), function(Pattern) ->
     [{Module,X} || {X,Y} <- Module:module_info(exports), Pattern(X), Y == 0].
@@ -57,5 +61,14 @@ use_and_purge_tree (Tree, Fun) ->
       Tree,
       Fun,
       fun (Dir, _) ->
-	      compiling:purge_modules_from_directory (Dir)
+	      compiling:purge_modules_from_directory (Dir),
+	      purge_messages()
       end).
+
+purge_messages() ->
+    receive
+	_ ->
+	    purge_messages()
+    after 0 ->
+	    ok
+    end.

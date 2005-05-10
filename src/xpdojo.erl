@@ -1,5 +1,5 @@
-%%% Copyright (c) Dominic Williams, Nicolas Charpentier, Virgile Delecolle, 
-%%% Fabrice Nourisson, Jacques Couvreur.
+%%% Copyright (c) 2004-2005 Dominic Williams, Nicolas Charpentier,
+%%% Fabrice Nourisson, Jacques Couvreur, Virgile Delecolle.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -123,14 +123,26 @@ acceptance ([{unit, UnitTotal, UnitSuccesses}, {modules, Module_total, Compiled_
     
 test_pass (Module_filter, Function_filter, Report_function, Modules, Pass_name, Acc) ->
     Tests = [X || X <- Modules, Module_filter(X)],
-    {Total,Failures} = testing:run_modules (Tests, Function_filter),
+    Results = testing:run_modules (Tests, Function_filter),
+    {Total, FailureCount, Failures}
+	= lists:foldl(
+	    fun({Module, Count, []}, {Sum, FailureCount, FailuresAcc}) ->
+		    {Count + Sum, FailureCount, [Module|FailuresAcc]};
+	       ({Module, Count, Failures}, {Sum, FailureCount, FailuresAcc}) ->
+		    {Count + Sum, FailureCount+length(Failures), [{Module,Failures} | FailuresAcc]}
+	    end,
+	    {0, 0, []},
+	    Results),
+
     report(Failures, Pass_name, Report_function),
-    [{Pass_name, Total, Total- length (Failures)} | Acc ].
+    [{Pass_name, Total, Total - FailureCount} | Acc ].
     
-report ([], _Pass_name, _Report_function) ->
-    ok;
-report ([H|T], Pass_name, Report_function) ->
-    Report_function ({Pass_name, {error, H}}),
-%     io:fwrite("~p~n",[H]),
-    report (T, Pass_name, Report_function).
+report ([{Module, Failures} | T], Pass_name, Report_function) ->
+    Report_function ({Pass_name, {error, Module, Failures}}),
+    report (T, Pass_name, Report_function);
+report ([Module | T], Pass_name, Report_function) ->
+    Report_function ({Pass_name, {ok, Module}}),
+    report (T, Pass_name, Report_function);
+report ([], _, _) ->
+    ok.
 
