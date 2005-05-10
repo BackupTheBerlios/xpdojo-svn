@@ -29,7 +29,7 @@
 
 -module(continuously_test_files_acceptance).
 -compile(export_all).
--import(testing, [use_and_purge_tree/2,use_and_purge_relative_tree/2]).
+-import(testing, [use_and_purge_tree/2]).
 
 bad_foo() ->
     {file,"foo.erl",
@@ -86,7 +86,7 @@ baz() ->
       "-export([run/0]).",
       "run() -> yohoho."]}.
 
-silent_report(X) ->
+silent_report(_) ->
     ok.
 
 options() ->
@@ -320,11 +320,13 @@ custom_report_function_compile_error_test() ->
       fun (Dir,_) ->
  	      [{modules, 1, 0}] = xpdojo:test_files (Dir, Options),
  	      Expected_filename = filename:join (Dir, "foo.erl"),
- 	      ok = receive
- 		       {compile, {error, Expected_filename, Errors, Warnings}} ->
- 			   ok
- 		   after 0 -> message_not_found
- 		   end
+ 	      {ok, Errors} =
+		  receive
+		      {compile, {error, Expected_filename, Errors2, _Warnings}} ->
+			  {ok, Errors2}
+		  after 0 -> message_not_found
+		  end,
+	      true = length(Errors) > 0
       end).
 
 custom_report_function_compile_success_test() ->
@@ -334,8 +336,9 @@ custom_report_function_compile_success_test() ->
       [foo()],
       fun (Dir,_) ->
  	      [{acceptance, 0, 0}, {unit, 0, 0}, {modules, 1, 1}] = xpdojo:test_files (Dir, Options),
+	      Expected_filename = filename:join (Dir, "foo.erl"),
  	      ok = receive
- 		       {compile, {ok, File, Warnings}} ->
+ 		       {compile, {ok, Expected_filename, []}} ->
  			   ok;
  		       Message ->
  			   Message
@@ -351,13 +354,15 @@ custom_report_function_unit_error_test() ->
       fun(Dir,_)->
   	      [{unit, 1, 0}, {modules, 1, 1}] = xpdojo:test_files (Dir, Options),
 	      ok = receive {compile,_} -> ok after 0 -> compile_message_not_found end,
-   	      ok = receive
-		       {unit, {error, foo_ut, Errors}} ->
-			   ok;
-		       Message ->
-			   Message
-   		   after 0 -> message_not_found
-   		   end
+   	      {ok, Errors} =
+		  receive
+		      {unit, {error, foo_ut, Errors2}} ->
+			  {ok, Errors2};
+		      Message ->
+			  Message
+		  after 0 -> message_not_found
+		  end,
+	      true = length (Errors) > 0
       end).
 
 custom_report_function_unit_success_test() ->

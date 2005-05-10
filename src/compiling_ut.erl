@@ -29,7 +29,7 @@
 
 -module(compiling_ut).
 -compile(export_all).
--import(testing, [use_and_purge_tree/2,use_and_purge_relative_tree/2]).
+-import(testing, [use_and_purge_tree/2]).
 
 bar() ->
     {file,"bar.erl",
@@ -109,7 +109,7 @@ compile_with_report_function_test() ->
 				 fun(Result) ->
 					 self() ! {Signature, Result} end),
 	      ok = receive
-		       {Signature, Result} ->
+		       {Signature, _Result} ->
 			   ok
 		   after 100 ->
 			   nok
