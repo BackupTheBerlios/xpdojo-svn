@@ -31,6 +31,9 @@
 -compile(export_all).
 -import(testing, [use_and_purge_tree/2]).
 
+silent_report(_) ->
+    ok.
+    
 bar() ->
     {file,"bar.erl",
      ["-module(bar).",
@@ -77,27 +80,27 @@ differences_test() ->
     ok.
 
 compile_nothing_test() ->
-    {{compiled, []}, {failed, []}} = compiling:compile ("my_dir", []).
+    {{compiled, []}, {failed, []}} = compiling:compile ("my_dir", [], fun silent_report/1).
 
 compile_one_good_file_test() ->
     use_and_purge_tree (
       [{file, "foo.erl", source:module(foo,[bar])}],
       fun (Dir,_) ->
-	      {{compiled, [foo]}, {failed, []}} = compiling:compile (Dir, [filename:join (Dir, "foo.erl")])
+	      {{compiled, [foo]}, {failed, []}} = compiling:compile (Dir, [filename:join (Dir, "foo.erl")], fun silent_report/1)
       end).
 
 compile_one_bad_file_test() ->
     use_and_purge_tree (
       [{file, "foo.erl", "-module(foo).\nbla() -."}],
       fun (Dir,_) ->
-	      {{compiled, []}, {failed, [foo]}} = compiling:compile (Dir, [filename:join (Dir, "foo.erl")])
+	      {{compiled, []}, {failed, [foo]}} = compiling:compile (Dir, [filename:join (Dir, "foo.erl")], fun silent_report/1)
       end).
 
 compile_all_kind_test() ->
     use_and_purge_tree (
       [{file, "foo.erl", source:module(foo,[bar])},{file, "bad_foo.erl", "-module(bad_foo).\nbla() -."},{file, "other_bad_foo.erl", "-module(other_bad_foo).\nbla() -."}],
       fun (Dir,_) ->
-	      {{compiled, [foo]}, {failed, [other_bad_foo,bad_foo]}} = compiling:compile (Dir, [filename:join (Dir, X ) || X <- ["foo.erl","bad_foo.erl","other_bad_foo.erl"]])
+	      {{compiled, [foo]}, {failed, [other_bad_foo,bad_foo]}} = compiling:compile (Dir, [filename:join (Dir, X ) || X <- ["foo.erl","bad_foo.erl","other_bad_foo.erl"]], fun silent_report/1)
       end).
     
 compile_with_report_function_test() ->

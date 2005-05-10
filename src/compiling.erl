@@ -30,7 +30,6 @@
 -module (compiling).
 -export ([modules_from_directory/2, differences/2, differences/3, file_time/1, module_time/1]).
 -export ([source_of_module/1, purge_modules_from_directory/1, loaded_modules/0, loaded_modules/1]).
--export ([compile/2]).
 -export ([compile/3]).
 
 -include_lib("kernel/include/file.hrl").
@@ -112,9 +111,6 @@ cleanup_accumulators ([], Acc) ->
 module_name (File) ->
     list_to_atom (filename:basename (File, ".erl")).
 
-compile (Dir, List) ->
-    compile (Dir, List, fun(X) -> io:fwrite("~p~n",[X]) end).
-				
 compile (Dir, List, Report_function) ->
     compile (Dir, List, Report_function, {[], []}).
 
