@@ -34,7 +34,7 @@
 default_options() ->
     [{unit_modules_filter, adlib:ends_with("ut")},
      {unit_functions_filter, adlib:ends_with("test")},
-     {report_function, fun ({Phase, Term}) -> io:fwrite("~p: ~p~n", [Phase, Term]) end}].
+     {report_function, fun simple_report/1}].
 
 test_files (Directory) ->
     test_files(Directory, default_options()).
@@ -145,4 +145,7 @@ report ([Module | T], Pass_name, Report_function) ->
     report (T, Pass_name, Report_function);
 report ([], _, _) ->
     ok.
+
+simple_report ({Phase, Term}) ->
+    io:fwrite("~p: ~p~n", [Phase, Term]).
 
