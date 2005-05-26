@@ -38,7 +38,8 @@ erlang_files_test () ->
 	[{file,"titi.erl",[]}]}],
       fun (Dir, _) ->
 	      Expected = [filename:join (Dir, X) || X <- ["src/titi.erl", "toto.erl"]],
-	      Expected = source:erlang_files(Dir)
+	      Result = source:erlang_files (Dir),
+	      same_elements = adlib:compare (Expected, Result)
       end).
     
 module_test() ->

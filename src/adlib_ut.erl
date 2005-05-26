@@ -185,8 +185,10 @@ fold_files_pick_files_test() ->
 			 {directory,"Dir2",[]},
 			 {file,"tata.xml",[]}],
 		   fun(Root2,_Tree) ->
-			   ["tata.xml","titi.txt",bla] = adlib:fold_files(Root2,Action,[type,relative_full_name],[bla])
-		   end).
+			   Expected = ["tata.xml","titi.txt",bla],
+			   Result = adlib:fold_files(Root2,Action,[type,relative_full_name],[bla]),
+			   same_elements = adlib:compare (Expected, Result)
+ 		   end).
 
 fold_files_pick_files_absolute_test() ->
     Root = adlib:temporary_pathname(),
@@ -201,7 +203,8 @@ fold_files_pick_files_absolute_test() ->
 			 {file,"tata.xml",[]}],
 		   fun(Root2,_Tree) ->
 			   Expected = [filename:join(Root2,"tata.xml"),filename:join(Root2,"titi.txt"), bla],
-			   Expected = adlib:fold_files(Root2,Action,[type,absolute_full_name],[bla])
+			   Result = adlib:fold_files(Root2,Action,[type,absolute_full_name],[bla]),
+			   same_elements = adlib:compare (Expected, Result)
 		   end).
     
 fold_files_pick_erlang_source_absolute_with_subdirectory_test() ->
@@ -221,7 +224,8 @@ fold_files_pick_erlang_source_absolute_with_subdirectory_test() ->
 		   fun(Root2,_Tree) ->
 			   Expected = [filename:join(Root2,filename:join("Dir2","tutu.erl")),
 				       filename:join(Root2,"toto.erl"), bla],
-			   Expected = adlib:fold_files(Root2,Action,[type,extension,absolute_full_name],[bla])
+			   Result = adlib:fold_files(Root2,Action,[type,extension,absolute_full_name],[bla]),
+			   same_elements = adlib:compare (Expected, Result)
 		   end).
     
     
@@ -244,3 +248,10 @@ normalise_path_test() ->
 	"Toto/titi" = adlib:normalise_path("Toto/titi"),
 	"Toto/titi" = adlib:normalise_path("Toto/./titi"),
 	"Foo/bar" = adlib:normalise_path ("./Bla/../Foo/bar/titi/..").
+
+compare_test() ->
+    same_elements = adlib:compare ([],[]),
+    same_elements = adlib:compare ([1, a, "Hello"], [a, 1, "Hello"]),
+    {{left_extras, [bla, 1]}, {right_extras, []}} = adlib:compare (["Wow", 1, bla], ["Wow"]),
+    {{left_extras, [1]}, {right_extras, [2, "Yo"]}} = adlib:compare (["Wow", 1, bla], ["Wow", 2, "Yo", bla]).
+    

@@ -36,6 +36,7 @@
 -export([accumulate_if/3, accumulate_unless/3, is_below_directory/2]).
 -export([update_options/2]).
 -export([normalise_path/1]).
+-export([compare/2]).
 
 -include_lib("kernel/include/file.hrl").
 
@@ -240,3 +241,17 @@ path_filter ([],Acc) ->
 
 normalise_path(Path) ->
     filename:join(path_filter(filename:split(Path),[])).
+
+compare (List1, List2) ->
+    compare_aux (List1, List2, []).
+
+compare_aux ([], [], []) ->
+    same_elements;
+compare_aux ([HeadLeft| TailLeft], Right, ExtraLeft) ->
+    compare_aux (
+      TailLeft,
+      lists:delete (HeadLeft, Right),
+      accumulate_unless (lists:member (HeadLeft, Right), HeadLeft, ExtraLeft));
+compare_aux ([], Remaining, ExtraLeft) ->
+    {{left_extras, ExtraLeft}, {right_extras, Remaining}}.
+    
