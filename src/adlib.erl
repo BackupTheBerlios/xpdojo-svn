@@ -67,11 +67,11 @@ use_tree(Dir,Tree,Fun) ->
 use_tree (Dir, Tree, Use_fun, Cleanup_fun) ->
     adlib:make_tree(Dir,Tree),
     LastCall = case catch Use_fun(Dir,Tree) of
-				   {'EXIT',Reason} ->
-					   fun() -> exit(Reason) end;
-				   Result ->
-					   fun() -> Result end
-			   end,
+		   {'EXIT',Reason} ->
+		       fun() -> exit(Reason) end;
+		   Result ->
+		       fun() -> Result end
+	       end,
     Cleanup_fun (Dir, Tree),
     adlib:delete_tree(Dir),
     LastCall().
@@ -79,9 +79,9 @@ use_tree (Dir, Tree, Use_fun, Cleanup_fun) ->
 temporary_pathname() ->
     Possible_roots = [os:getenv(X) || X <- ["TMP","TEMP","HOME"], os:getenv(X)/=false],
     {ok, {Root,_}} =
-		first(
-		  fun(X) -> filelib:is_dir(X) end,
-		  Possible_roots),
+	first(
+	  fun(X) -> filelib:is_dir(X) end,
+	  Possible_roots),
     Pathname = filename:join(Root,unique_string()),
     {error,enoent} = file:read_file_info(Pathname),
     Pathname.
@@ -107,7 +107,7 @@ populate(_,[]) ->
 normalise([H|[]]) ->
     H;
 normalise([H|T]) when list(H) ->
-												% Inserts newlines when list of strings...
+						% Inserts newlines when list of strings...
     normalise([string:concat(H,string:concat("\n",hd(T)))|tl(T)]);
 normalise([String]) when list(String) ->
     String;
@@ -117,15 +117,17 @@ normalise(String) when list(String) ->
 depopulate(Directory) ->
     {ok, Filename_list} = file:list_dir(Directory),
     Delete = fun(Filename) ->
-					 Pathname = filename:join(Directory,Filename),
-					 {ok,File_info} = file:read_file_info(Pathname),
-					 case File_info#file_info.type of
-						 directory ->
-							 delete_tree(Pathname);
-						 regular ->
-							 ok = file:delete(Pathname)
-					 end
-			 end,
+		     Pathname = filename:join(Directory,Filename),
+		     {ok,File_info} = file:read_link_info(Pathname),
+		     case File_info#file_info.type of
+			 directory ->
+			     delete_tree(Pathname);
+			 regular ->
+			     ok = file:delete(Pathname);
+			 symlink ->
+			     ok = file:delete(Pathname)
+		     end
+	     end,
     lists:foreach(Delete,Filename_list).
 
 unique(List) ->
@@ -148,9 +150,9 @@ accumulate_if (false, _Item, List) ->
 strip_whitespace(String) when list(String) ->
     lists:filter(
       fun($\s) -> false;
-		 ($\n) -> false;
-		 ($\t) -> false;
-		 (Other) when integer(Other) -> true
+	 ($\n) -> false;
+	 ($\t) -> false;
+	 (Other) when integer(Other) -> true
       end,
       String).
 
@@ -174,32 +176,43 @@ begins_with([],[]) ->
 
 ends_with(Ending) ->
     fun(String) ->
-			ends_with(String,Ending)
+	    ends_with(String,Ending)
     end.
 
 begins_with(Token) ->
     fun(String) ->
-			begins_with(String,Token)
+	    begins_with(String,Token)
     end.
 
 fold_files(Root,Action,Options,Acc) when list(Root) ->
     {ok,Content} = file:list_dir(Root),
-    lists:foldl(fun(Item,Acc2) ->
-						[Type] = xray(Root,Item,[type],[]),
-						fold_files(Type,Root,Item,Options,Action,Acc2)
-				end,
-				Acc,
-				Content).
+    lists:foldl (
+      fun (Item, Acc2) ->
+	      fold_files (
+		xray (Root, Item, [type], []),
+		Root,
+		Item,
+		Options,
+		Action,
+		Acc2)
+      end,
+      Acc,
+      Content).
 
-fold_files(directory,Root,Item,Options,Action,Acc) ->
-    fold_files(filename:join(Root,Item),Action,Options,
-			   Action(xray(Root,Item,Options,[]),Acc));
-fold_files(_Type,Root,Item,Options,Action,Acc) ->
+fold_files ([directory], Root, Item, Options, Action, Acc) ->
+    fold_files (
+      filename:join (Root, Item),
+      Action,
+      Options,
+      Action (xray (Root, Item, Options, []), Acc));
+fold_files (Error = {error, _}, _, _, _, Action, Acc) ->
+    Action (Error, Acc);
+fold_files (_Type,Root,Item,Options,Action,Acc) ->
     Action(xray(Root,Item,Options,[]),Acc).
 
 xray(Root,Item,[type|T],Acc) ->
-    {ok,File_info} = file:read_file_info(filename:join(Root,Item)),
-    xray(Root,Item,T,[File_info#file_info.type|Acc]);
+    Result = file:read_file_info (filename:join (Root, Item)),
+    continue_if_ok ( Result, Root, Item, T, Acc);
 xray(Root,Item,[relative_full_name|T],Acc) ->
     xray(Root,Item,T,[Item|Acc]);
 xray(Root,Item,[absolute_full_name|T],Acc) ->
@@ -208,6 +221,11 @@ xray(Root,Item,[extension|T],Acc) ->
     xray(Root,Item,T,[filename:extension(Item)|Acc]);
 xray(_,_,[],Acc) ->
     lists:reverse(Acc).
+
+continue_if_ok ( {ok, File_info}, Root, Item, T, Acc) ->
+    xray (Root, Item, T, [File_info#file_info.type | Acc]);
+continue_if_ok ( Error = {error, _}, _, _, _, _) ->
+    Error.
 
 is_below_directory (Path1, Path2) ->
     is_below_directory2 (lists:reverse (filename:split (Path1)), lists:reverse (filename:split(Path2))).
@@ -223,21 +241,21 @@ update_options (Custom,Default) ->
     Custom_dict = dict:from_list (Custom),
     Default_dict = dict:from_list (Default),
     CustomFiltered_dict =
-		dict:filter (fun (Key,_Value) -> dict:is_key (Key, Default_dict) end,
-					 Custom_dict),
+	dict:filter (fun (Key,_Value) -> dict:is_key (Key, Default_dict) end,
+		     Custom_dict),
     dict:to_list (dict:merge
-				  (fun (_Key, Left, _Right) -> Left end,
-				   CustomFiltered_dict,
-				   Default_dict)).
+		  (fun (_Key, Left, _Right) -> Left end,
+		   CustomFiltered_dict,
+		   Default_dict)).
 
 path_filter ([_,".."|Tail],Acc) ->
-	path_filter (Tail,Acc);
+    path_filter (Tail,Acc);
 path_filter (["."|Tail],Acc) ->
-	path_filter (Tail,Acc);
+    path_filter (Tail,Acc);
 path_filter ([Var|Tail],Acc) ->
-	[Var|path_filter (Tail,Acc)];
+    [Var|path_filter (Tail,Acc)];
 path_filter ([],Acc) ->
-	Acc.
+    Acc.
 
 normalise_path(Path) ->
     filename:join(path_filter(filename:split(Path),[])).
@@ -254,4 +272,4 @@ compare_aux ([HeadLeft| TailLeft], Right, ExtraLeft) ->
       accumulate_unless (lists:member (HeadLeft, Right), HeadLeft, ExtraLeft));
 compare_aux ([], Remaining, ExtraLeft) ->
     {{left_extras, ExtraLeft}, {right_extras, Remaining}}.
-    
+

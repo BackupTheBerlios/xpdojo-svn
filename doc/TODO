@@ -4,6 +4,7 @@ FOR FIRST RELEASE
 Continuous file testing:
 
 - removed file.
+- file removed (or emacs unsaved files saved) between source:erlang_files and later processing?
 - optional location for .beam files.
 - handle case when .beam files have been manually removed.
 - optional report function.

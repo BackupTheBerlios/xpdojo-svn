@@ -228,6 +228,45 @@ fold_files_pick_erlang_source_absolute_with_subdirectory_test() ->
 			   same_elements = adlib:compare (Expected, Result)
 		   end).
     
+fold_files_follow_links_test() ->
+    adlib:use_tree (
+      adlib:temporary_pathname(),
+      [{file,"toto.txt","Hello"}],
+      fun (Dir, _) ->
+	      ok = file:make_symlink (
+		     filename:join (Dir, "toto.txt"),
+		     filename:join (Dir, "link")),
+	      Result =
+		  adlib:fold_files (
+		    Dir,
+		    fun ([Type, Name], Acc) ->
+			    [{Type,Name} | Acc]
+		    end,
+		    [type, relative_full_name],
+		    []),
+	      [{regular, "link"}, {regular, "toto.txt"}] = Result
+      end).
+
+fold_files_ignore_bad_links_test() ->
+    adlib:use_tree (
+      adlib:temporary_pathname(),
+      [{file,"toto.txt","Hello"}],
+      fun (Dir, _) ->
+	      ok = file:make_symlink (
+		     filename:join (Dir, "nonexistent_target"),
+		     filename:join (Dir, "link")),
+	      Result =
+		  adlib:fold_files (
+		    Dir,
+		    fun ([Type, Name], Acc) ->
+			    [{Type,Name} | Acc];
+			(Error = {error, _}, Acc) ->
+			    [Error | Acc]
+		    end,
+		    [type, relative_full_name],
+		    []),
+	      [{error,enoent}, {regular, "toto.txt"}] = Result
+      end).
     
 accumulate_if_test () ->
     [] = adlib:accumulate_if (false, foo, []),

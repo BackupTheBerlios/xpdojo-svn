@@ -395,3 +395,19 @@ unchanged_for_same_path_test() ->
 
 my_report_function ({Phase, Term}) ->
     self() ! {Phase, Term}.
+
+bad_links_test() ->
+    adlib:use_tree(
+      adlib:temporary_pathname(),
+      [foo()],
+      fun (Dir, _) ->
+	      [{acceptance,0,0}, {unit,0,0}, {modules,1,1}] = xpdojo:test_files (Dir, options()),
+	      Link = filename:join (Dir, "titi.erl"),
+	      Destination = filename:join (Dir, "nofile"),
+	      file:make_symlink (Destination, Link),
+	      unchanged = xpdojo:test_files (Dir, options())
+      end,
+     fun (Dir, _) ->
+	    file:delete (filename:join (Dir, "titi.erl"))
+     end).
+
