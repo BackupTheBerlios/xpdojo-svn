@@ -404,8 +404,12 @@ bad_links_test() ->
 	      [{acceptance,0,0}, {unit,0,0}, {modules,1,1}] = xpdojo:test_files (Dir, options()),
 	      Link = filename:join (Dir, "titi.erl"),
 	      Destination = filename:join (Dir, "nofile"),
-	      file:make_symlink (Destination, Link),
-	      unchanged = xpdojo:test_files (Dir, options())
+	      case file:make_symlink (Destination, Link) of
+		  ok ->
+		      unchanged = xpdojo:test_files (Dir, options());
+		  {error, enotsup} ->
+		      ok
+	      end
       end,
      fun (Dir, _) ->
 	    file:delete (filename:join (Dir, "titi.erl"))

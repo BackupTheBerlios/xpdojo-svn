@@ -233,18 +233,22 @@ fold_files_follow_links_test() ->
       adlib:temporary_pathname(),
       [{file,"toto.txt","Hello"}],
       fun (Dir, _) ->
-	      ok = file:make_symlink (
+	      case file:make_symlink (
 		     filename:join (Dir, "toto.txt"),
-		     filename:join (Dir, "link")),
-	      Result =
-		  adlib:fold_files (
-		    Dir,
-		    fun ([Type, Name], Acc) ->
-			    [{Type,Name} | Acc]
-		    end,
-		    [type, relative_full_name],
-		    []),
-	      [{regular, "link"}, {regular, "toto.txt"}] = Result
+		     filename:join (Dir, "link")) of
+		  ok ->
+		      Result =
+			  adlib:fold_files (
+			    Dir,
+			    fun ([Type, Name], Acc) ->
+				    [{Type,Name} | Acc]
+			    end,
+			    [type, relative_full_name],
+			    []),
+		      same_elements = adlib:compare ([{regular, "link"}, {regular, "toto.txt"}], Result);
+		  {error, enotsup} ->
+		      ok
+	      end
       end).
 
 fold_files_ignore_bad_links_test() ->
@@ -252,20 +256,24 @@ fold_files_ignore_bad_links_test() ->
       adlib:temporary_pathname(),
       [{file,"toto.txt","Hello"}],
       fun (Dir, _) ->
-	      ok = file:make_symlink (
+	      case file:make_symlink (
 		     filename:join (Dir, "nonexistent_target"),
-		     filename:join (Dir, "link")),
-	      Result =
-		  adlib:fold_files (
-		    Dir,
-		    fun ([Type, Name], Acc) ->
-			    [{Type,Name} | Acc];
-			(Error = {error, _}, Acc) ->
-			    [Error | Acc]
-		    end,
-		    [type, relative_full_name],
-		    []),
-	      [{error,enoent}, {regular, "toto.txt"}] = Result
+		     filename:join (Dir, "link")) of
+		  ok ->
+		      Result =
+			  adlib:fold_files (
+			    Dir,
+			    fun ([Type, Name], Acc) ->
+				    [{Type,Name} | Acc];
+				(Error = {error, _}, Acc) ->
+				    [Error | Acc]
+			    end,
+			    [type, relative_full_name],
+			    []),
+		      same_elements = adlib:compare ([{error,enoent}, {regular, "toto.txt"}], Result);
+		  {error, enotsup} ->
+		      ok
+	      end
       end).
     
 accumulate_if_test () ->
