@@ -37,6 +37,7 @@
 -export([update_options/2]).
 -export([normalise_path/1]).
 -export([compare/2]).
+-export([write_term/0]).
 
 -include_lib("kernel/include/file.hrl").
 
@@ -273,3 +274,7 @@ compare_aux ([HeadLeft| TailLeft], Right, ExtraLeft) ->
 compare_aux ([], Remaining, ExtraLeft) ->
     {{left_extras, ExtraLeft}, {right_extras, Remaining}}.
 
+write_term() ->
+    fun(Term) ->
+	    io:fwrite("~p~n",[Term])
+    end.
