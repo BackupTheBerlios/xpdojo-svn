@@ -27,60 +27,33 @@
 %%% IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 %%% POSSIBILITY OF SUCH DAMAGE.
 
--module(testing).
--export([run_functions/1, run_modules/2, use_and_purge_tree/2, wait_for_detectable_modification_time/0, receive_one/0]).
+-module(file_monitor_acceptance).
+-compile(export_all).
+-import(testing, [use_and_purge_tree/2, receive_one/0, wait_for_detectable_modification_time/0]).
 
-run_functions(Functions) when list(Functions) ->
-    lists:foldl(
-      fun(Fun, {Count,Errors}) ->
-	      case catch Fun() of
-		  {'EXIT', Reason} ->
-		      {Count+1,[Reason|Errors]};
-		  _Other ->
-		      {Count+1,Errors}
-	      end
-      end, 
-      {0,[]}, 
-      Functions).
-run_modules(Modules,Pattern) when list(Modules) ->
-    lists:foldl(
-       fun(Module, Acc) ->
-	      {FunctionCount,ModuleErrors} = run_functions(select_test_functions(Module,Pattern)),
-%		  Results = run_functions(select_test_functions(Module,Pattern)),
-	      [{Module, FunctionCount, ModuleErrors} | Acc]
-      end, 
-	  [], 
-	  Modules).
-
-select_test_functions(Module,Pattern) when atom(Module), function(Pattern) ->
-    [{Module,X} || {X,Y} <- Module:module_info(exports), Pattern(X), Y == 0].
-
-use_and_purge_tree (Tree, Fun) ->
-    adlib:use_tree (
-      adlib:temporary_pathname(),
-      Tree,
-      Fun,
+missing_file_test() ->
+    use_and_purge_tree (
+      [],
       fun (Dir, _) ->
-	      compiling:purge_modules_from_directory (Dir),
-	      purge_messages()
+	      File_name = filename:join (Dir, "myfile.erl"),
+	      Pid = file_monitor:start (File_name, self()),
+	      {Pid, missing} = receive_one(),
+	      false = is_process_alive (Pid)
       end).
 
-purge_messages() ->
-    receive
-	_ ->
-	    purge_messages()
-    after 0 ->
-	    ok
-    end.
-
-receive_one() ->
-    receive
-	Message ->
-	    Message
-    after 100 ->
-	    timeout
-    end.
-
-wait_for_detectable_modification_time() ->
-    timer:sleep (1000).
-
+single_file_test() ->
+    use_and_purge_tree (	      
+      [{file,"myfile.txt","Hello"}],
+      fun (Dir, _) ->
+	      File_name = filename:join (Dir, "myfile.txt"),
+	      Pid = file_monitor:start (File_name, self()),
+	      {Pid, found} = receive_one(),
+	      timeout = receive_one(),
+	      wait_for_detectable_modification_time(),
+	      file:write_file (File_name, "Goodbye"),
+	      {Pid, modified} = receive_one(),
+	      file:delete (File_name),
+	      {Pid, deleted} = receive_one(),
+	      false = is_process_alive (Pid)
+      end).
+    
