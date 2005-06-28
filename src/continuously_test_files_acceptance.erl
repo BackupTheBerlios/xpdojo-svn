@@ -338,7 +338,7 @@ custom_report_function_compile_success_test() ->
  	      [{acceptance, 0, 0}, {unit, 0, 0}, {modules, 1, 1}] = xpdojo:test_files (Dir, Options),
 	      Expected_filename = filename:join (Dir, "foo.erl"),
  	      ok = receive
- 		       {compile, {ok, Expected_filename, []}} ->
+ 		       {compile, {ok, Expected_filename, _}} ->
  			   ok;
  		       Message ->
  			   Message
