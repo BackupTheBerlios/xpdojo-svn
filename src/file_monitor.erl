@@ -41,19 +41,23 @@ loop (File_name, Pid, Previous_state)->
 	{ok, File_info} ->
 	    New_state = File_info#file_info.mtime
     end,
-    handle_change(File_name, Pid, Previous_state, New_state).
+    Notify = fun (State) ->
+		     Pid ! {self(), State}
+	     end,
+    Loop = fun (State) ->
+		   loop (File_name, Pid, State)
+	   end,
+    handle_change(Loop, Notify, Previous_state, New_state).
 
-handle_change (_, Pid, init, missing) ->
-    Pid ! {self(), missing};
-handle_change (_, Pid, _, missing) ->
-    Pid ! {self(), deleted};
-handle_change (File_name, Pid, Time, Time)->
-    loop(File_name, Pid, Time);
-handle_change (File_name, Pid, init, Time) ->
-    Pid ! {self(), found},
-    loop(File_name, Pid, Time);
-handle_change (File_name, Pid, _, New_time) ->
-    Pid ! {self(), modified},
-    loop(File_name, Pid, New_time).
-    
-   
+handle_change (_, Notify, init, missing) ->
+    Notify (missing);
+handle_change (_, Notify, _, missing) ->
+    Notify (deleted);
+handle_change (Loop, _, Time, Time)->
+    Loop (Time);
+handle_change (Loop, Notify, init, Time) ->
+    Notify (found),
+    Loop (Time);
+handle_change (Loop, Notify, _, New_time) ->
+    Notify (modified),
+    Loop (New_time).

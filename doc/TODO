@@ -11,7 +11,6 @@ Continuous file testing:
 - optional compile options.
 - conflicts and auto(dojo)-development.
 - Look why some module don't have source code %    unknown = compiling:source_of_module (prim_file),
-- Avoid {error,enoent} when running test_files on weird links (unsaved emacs files).
 - Avoid recompiling when changing case of directory, or introducing ../.. 
   (idea: the simplest may be to write an adlib:normalise_path/1 function, and call it at the top of
   xpdojo:test_files).
