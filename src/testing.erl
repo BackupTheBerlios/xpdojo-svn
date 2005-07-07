@@ -28,7 +28,7 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(testing).
--export([run_functions/1, run_modules/2, use_and_purge_tree/2, wait_for_detectable_modification_time/0, receive_one/0]).
+-export([run_functions/1, run_modules/2, use_and_purge_tree/2, wait_for_detectable_modification_time/0, receive_one_from/1]).
 
 run_functions(Functions) when list(Functions) ->
     lists:foldl(
@@ -73,14 +73,14 @@ purge_messages() ->
 	    ok
     end.
 
-receive_one() ->
+wait_for_detectable_modification_time() ->
+    timer:sleep (1000).
+
+receive_one_from(Pid) ->
     receive
-	Message ->
+	{Pid, Message} ->
 	    Message
     after 100 ->
 	    timeout
     end.
-
-wait_for_detectable_modification_time() ->
-    timer:sleep (1000).
-
+	

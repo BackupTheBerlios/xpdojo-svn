@@ -67,3 +67,16 @@ funnyprefixed_unsuccessful_test_() ->
 funnyprefixed_another_successful_test_() ->
     successful_test_().
 
+receive_one_from_test() ->
+    MessageSender = fun (Pid, Message) ->
+			    fun() ->  Pid ! {self(), Message} end
+		    end,
+    Pid1 = spawn(MessageSender(self(), hello)),
+    Pid2 = spawn(MessageSender(self(), goodbye)),
+    goodbye = testing:receive_one_from(Pid2),
+    hello = testing:receive_one_from(Pid1),
+    timeout = testing:receive_one_from(self()).
+
+    
+				     
+			    

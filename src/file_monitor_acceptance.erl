@@ -29,7 +29,7 @@
 
 -module(file_monitor_acceptance).
 -compile(export_all).
--import(testing, [use_and_purge_tree/2, receive_one/0, wait_for_detectable_modification_time/0]).
+-import(testing, [use_and_purge_tree/2, receive_one_from/1, wait_for_detectable_modification_time/0]).
 
 missing_file_test() ->
     use_and_purge_tree (
@@ -37,7 +37,7 @@ missing_file_test() ->
       fun (Dir, _) ->
 	      File_name = filename:join (Dir, "myfile.erl"),
 	      Pid = file_monitor:start (File_name, self()),
-	      {Pid, missing} = receive_one(),
+	      missing = receive_one_from(Pid),
 	      false = is_process_alive (Pid)
       end).
 
@@ -47,13 +47,13 @@ single_file_test() ->
       fun (Dir, _) ->
 	      File_name = filename:join (Dir, "myfile.txt"),
 	      Pid = file_monitor:start (File_name, self()),
-	      {Pid, found} = receive_one(),
-	      timeout = receive_one(),
+	      found = receive_one_from(Pid),
+	      timeout = receive_one_from(Pid),
 	      wait_for_detectable_modification_time(),
 	      file:write_file (File_name, "Goodbye"),
-	      {Pid, modified} = receive_one(),
+	      modified = receive_one_from(Pid),
 	      file:delete (File_name),
-	      {Pid, deleted} = receive_one(),
+	      deleted = receive_one_from(Pid),
 	      false = is_process_alive (Pid)
       end).
     
