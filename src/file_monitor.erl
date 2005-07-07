@@ -28,11 +28,47 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(file_monitor).
--export([start/2, loop/3]).
+-export([start/2, loop/3, directory_loop/3]).
 -include_lib("kernel/include/file.hrl").
 
-start (File_name, Pid) ->
-    spawn(?MODULE, loop,[File_name, Pid, init]).
+start ({file, File_name}, Pid) ->
+    spawn(?MODULE, loop,[File_name, Pid, init]);
+start (Directory, Pid) ->
+    spawn (?MODULE, directory_loop, [Directory, Pid, init]).
+
+directory_loop (Directory, Pid, Previous_state) ->
+    % On peut commencer crade:
+    case file:read_file_info(Directory) of
+	{error, enoent} ->
+	    New_state = missing;
+	{ok, File_info} ->
+	    Action = fun([regular,Name],Acc)->
+			     [Name|Acc];
+			(_,Acc) ->
+			     Acc
+		     end,
+	    New_state = adlib:fold_files(Directory,Action,[type,relative_full_name],[])
+    end,
+    Notify = fun (State) ->
+		     Pid ! {self(), State}
+	     end,
+    Loop = fun (State) ->
+		   directory_loop(Directory, Pid, State)
+	   end,
+    handle_directory_change(Loop, Notify, Previous_state, New_state).
+
+handle_directory_change(_, Notify, _, missing) ->
+    Notify(missing);
+handle_directory_change(Loop, Notify, init, [])->
+    Notify(empty),
+    Loop([]);
+handle_directory_change(Loop, Notify, [], [File_name]) ->
+    Notify({new_file, File_name}),
+    Loop([File_name]);
+handle_directory_change(Loop, Notify, Unchanged, Unchanged) ->
+    Loop(Unchanged);
+handle_directory_change(_, _, [X], []) ->
+    bye.
 
 loop (File_name, Pid, Previous_state)->
     case file:read_file_info(File_name) of

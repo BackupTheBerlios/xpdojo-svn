@@ -36,7 +36,7 @@ missing_file_test() ->
       [],
       fun (Dir, _) ->
 	      File_name = filename:join (Dir, "myfile.erl"),
-	      Pid = file_monitor:start (File_name, self()),
+	      Pid = file_monitor:start ({file, File_name}, self()),
 	      missing = receive_one_from(Pid),
 	      false = is_process_alive (Pid)
       end).
@@ -46,7 +46,7 @@ single_file_test() ->
       [{file,"myfile.txt","Hello"}],
       fun (Dir, _) ->
 	      File_name = filename:join (Dir, "myfile.txt"),
-	      Pid = file_monitor:start (File_name, self()),
+	      Pid = file_monitor:start ({file, File_name}, self()),
 	      found = receive_one_from(Pid),
 	      timeout = receive_one_from(Pid),
 	      wait_for_detectable_modification_time(),
@@ -57,3 +57,26 @@ single_file_test() ->
 	      false = is_process_alive (Pid)
       end).
     
+%% Ca y est, j'ai compris... Il manque le suicide...
+
+missing_directory_test() ->
+    use_and_purge_tree(
+      [],
+      fun (Dir, _) ->
+	      Pid = file_monitor:start (filename:join(Dir,"nonexistent"), self()),
+	      missing = receive_one_from (Pid),
+	      timeout = receive_one_from (Pid),
+	      false = is_process_alive (Pid)
+      end).
+
+single_directory_test() ->
+    use_and_purge_tree (
+      [{directory,"foo",[]}],
+      fun(Dir,_) ->
+	      Directory = filename:join(Dir, "foo"),
+	      Pid = file_monitor:start (Directory, self()),
+	      empty = receive_one_from(Pid),
+	      File_name = filename:join(Directory, "foo.txt"),
+	      file:write_file(File_name,"Hello"),
+	      {new_file, "foo.txt"} = receive_one_from(Pid)
+      end).
