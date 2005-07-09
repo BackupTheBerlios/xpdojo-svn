@@ -32,16 +32,23 @@
 -include_lib("kernel/include/file.hrl").
 
 start ({file, File_name}, Pid) ->
-    spawn(?MODULE, loop,[File_name, Pid, init]);
+    spawn(?MODULE, loop,[File_name, notify_fun (Pid), init]);
 start (Directory, Pid) ->
     spawn (?MODULE, directory_loop, [Directory, Pid, init]).
 
+notify_fun(Pid) ->
+    fun ({Status, State}) ->
+	    Pid ! {self(), Status},
+	    State;
+	(Status) ->
+	    Pid ! {self(), Status}
+    end.
+
 directory_loop (Directory, Pid, Previous_state) ->
-    % On peut commencer crade:
     case file:read_file_info(Directory) of
 	{error, enoent} ->
 	    New_state = missing;
-	{ok, File_info} ->
+	{ok, _} ->
 	    Action = fun([regular,Name],Acc)->
 			     [Name|Acc];
 			(_,Acc) ->
@@ -65,35 +72,31 @@ handle_directory_change(Loop, Notify, init, [])->
 handle_directory_change(Loop, Notify, [], [File_name]) ->
     Notify({new_file, File_name}),
     Loop([File_name]);
-handle_directory_change(Loop, Notify, Unchanged, Unchanged) ->
+handle_directory_change(Loop, _, Unchanged, Unchanged) ->
     Loop(Unchanged);
-handle_directory_change(_, _, [X], []) ->
+handle_directory_change(_, _, [_], []) ->
     bye.
 
-loop (File_name, Pid, Previous_state)->
+loop (File_name, Action, Previous_state)->
     case file:read_file_info(File_name) of
 	{error, enoent} ->
 	    New_state = missing;
 	{ok, File_info} ->
 	    New_state = File_info#file_info.mtime
     end,
-    Notify = fun (State) ->
-		     Pid ! {self(), State}
-	     end,
     Loop = fun (State) ->
-		   loop (File_name, Pid, State)
+		   loop (File_name, Action, State)
 	   end,
-    handle_change(Loop, Notify, Previous_state, New_state).
+    handle_change(Loop, Action, Previous_state, New_state).
 
-handle_change (_, Notify, init, missing) ->
-    Notify (missing);
-handle_change (_, Notify, _, missing) ->
-    Notify (deleted);
+handle_change (_, Action, init, missing) ->
+    Action (missing);
+handle_change (_, Action, _, missing) ->
+    Action (deleted);
 handle_change (Loop, _, Time, Time)->
     Loop (Time);
-handle_change (Loop, Notify, init, Time) ->
-    Notify (found),
-    Loop (Time);
-handle_change (Loop, Notify, _, New_time) ->
-    Notify (modified),
-    Loop (New_time).
+handle_change (Loop, Action, init, Time) ->
+    Loop (Action ({found, Time}));
+handle_change (Loop, Action, _, New_time) ->
+    Loop (Action ({modified, New_time})).
+
