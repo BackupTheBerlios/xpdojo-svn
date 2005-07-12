@@ -28,75 +28,67 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(file_monitor).
--export([start/2, loop/3, directory_loop/3]).
+-export([start/2, loop/4]).
 -include_lib("kernel/include/file.hrl").
 
-start ({file, File_name}, Pid) ->
-    spawn(?MODULE, loop,[File_name, notify_fun (Pid), init]);
-start (Directory, Pid) ->
-    spawn (?MODULE, directory_loop, [Directory, Pid, init]).
+start (File_name, Notification) ->
+    start (filelib:is_dir(File_name), File_name, Notification).
 
-notify_fun(Pid) ->
-    fun ({Status, State}) ->
-	    Pid ! {self(), Status},
-	    State;
-	(Status) ->
-	    Pid ! {self(), Status}
+start (false, File_name, Notification) ->
+    spawn(?MODULE, loop,[File_name, notify_fun (File_name, Notification), init, []]);
+start (true, Directory, Notification) ->
+    spawn (?MODULE, loop, [Directory, spawn_and_notify_fun (Directory, Notification), init, []]).
+
+notify_fun(File_name, Notification) ->
+    fun (Event, State) ->
+	    Notification (Event, File_name),
+	    State
     end.
 
-directory_loop (Directory, Pid, Previous_state) ->
-    case file:read_file_info(Directory) of
-	{error, enoent} ->
-	    New_state = missing;
-	{ok, _} ->
-	    Action = fun([regular,Name],Acc)->
-			     [Name|Acc];
-			(_,Acc) ->
-			     Acc
-		     end,
-	    New_state = adlib:fold_files(Directory,Action,[type,relative_full_name],[])
-    end,
-    Notify = fun (State) ->
-		     Pid ! {self(), State}
-	     end,
-    Loop = fun (State) ->
-		   directory_loop(Directory, Pid, State)
-	   end,
-    handle_directory_change(Loop, Notify, Previous_state, New_state).
+spawn_and_notify_fun (File_name, Notification) ->
+    fun (Event, _) when Event == nonexistent; Event == deleted->
+	    Notification (Event, File_name);
+	(Event, Processes) when Event == found; Event == modified ->
+	    Notification (Event, File_name),
+	    adlib:fold_files_without_recursion (
+	      File_name,
+	      fun ([Name], Acc) ->
+		      case lists:keymember (Name, 2, Acc) of
+			  false ->
+			      NewPid = start (Name, Notification),
+			      [{NewPid, Name} | Acc];
+			  true ->
+			      Acc
+		      end
+	      end,
+	      [absolute_full_name],
+	      Processes)
+    end.
 
-handle_directory_change(_, Notify, _, missing) ->
-    Notify(missing);
-handle_directory_change(Loop, Notify, init, [])->
-    Notify(empty),
-    Loop([]);
-handle_directory_change(Loop, Notify, [], [File_name]) ->
-    Notify({new_file, File_name}),
-    Loop([File_name]);
-handle_directory_change(Loop, _, Unchanged, Unchanged) ->
-    Loop(Unchanged);
-handle_directory_change(_, _, [_], []) ->
-    bye.
-
-loop (File_name, Action, Previous_state)->
+loop (File_name, Action, Previous_event, State)->
     case file:read_file_info(File_name) of
 	{error, enoent} ->
-	    New_state = missing;
+	    Event = nonexistent;
 	{ok, File_info} ->
-	    New_state = File_info#file_info.mtime
+	    Event = File_info#file_info.mtime
     end,
-    Loop = fun (State) ->
-		   loop (File_name, Action, State)
+    Loop = fun (Event2, State2) ->
+		   loop (File_name, Action, Event2, State2)
 	   end,
-    handle_change(Loop, Action, Previous_state, New_state).
+    handle_change(Loop, Action, Previous_event, Event, State).
 
-handle_change (_, Action, init, missing) ->
-    Action (missing);
-handle_change (_, Action, _, missing) ->
-    Action (deleted);
-handle_change (Loop, _, Time, Time)->
-    Loop (Time);
-handle_change (Loop, Action, init, Time) ->
-    Loop (Action ({found, Time}));
-handle_change (Loop, Action, _, New_time) ->
-    Loop (Action ({modified, New_time})).
+handle_change (_, Action, init, nonexistent, State) ->
+    Action (nonexistent, State),
+    bye;
+handle_change (_, Action, _, nonexistent, State) ->
+    Action (deleted, State),
+    bye;
+handle_change (Loop, _, Time, Time, State)->
+    Loop (Time, State);
+handle_change (Loop, Action, init, Time, State) ->
+    New_state = Action (found, State),
+    Loop (Time, New_state);
+handle_change (Loop, Action, _, New_time, State) ->
+    New_state = Action (modified, State),
+    Loop (New_time, New_state).
 

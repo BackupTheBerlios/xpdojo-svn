@@ -32,7 +32,7 @@
 -export([make_tree/2, delete_tree/1, use_tree/3, use_tree/4]).
 -export([first/2, unique/1]).
 -export([strip_whitespace/1, begins_with/2, begins_with/1, ends_with/2, ends_with/1]).
--export([fold_files/4]).
+-export([fold_files/4, fold_files_without_recursion/4]).
 -export([accumulate_if/3, accumulate_unless/3, is_below_directory/2]).
 -export([update_options/2]).
 -export([normalise_path/1]).
@@ -186,11 +186,25 @@ begins_with(Token) ->
     end.
 
 fold_files(Root,Action,Options,Acc) when list(Root) ->
+    list_dir_and_call_ff_6_with (
+      Root, Action, Options, Acc,
+      fun (Item) ->
+	      xray (Root, Item, [type], [])
+      end).
+
+fold_files_without_recursion (Root,Action,Options,Acc) when list(Root) ->
+    list_dir_and_call_ff_6_with (
+      Root, Action, Options, Acc,
+      fun (_) ->
+	      ignored
+      end).
+
+list_dir_and_call_ff_6_with (Root, Action, Options, Acc, Fun) ->
     {ok,Content} = file:list_dir(Root),
     lists:foldl (
       fun (Item, Acc2) ->
 	      fold_files (
-		xray (Root, Item, [type], []),
+		Fun(Item),
 		Root,
 		Item,
 		Options,

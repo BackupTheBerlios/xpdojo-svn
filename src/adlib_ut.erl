@@ -275,7 +275,26 @@ fold_files_ignore_bad_links_test() ->
 		      ok
 	      end
       end).
-    
+
+fold_files_non_recursive_test() ->    
+    adlib:use_tree (
+      adlib:temporary_pathname(),
+      [{file, "toto", "Hello"},
+       {file, "titi.xml", "<a/>"},
+       {directory, "subdir", [{file, "notwanted.txt", "Yuk"}]}],
+      fun (Dir, _) ->
+	      Result =
+		  adlib:fold_files_without_recursion (
+		    Dir,
+		    fun ([Name], Acc) ->
+			    [Name|Acc]
+		    end,
+		    [relative_full_name],
+		    []),
+	      Expected = ["toto", "titi.xml", "subdir"],
+	      same_elements = adlib:compare (Expected, Result)
+      end).
+
 accumulate_if_test () ->
     [] = adlib:accumulate_if (false, foo, []),
     [foo, bar] = adlib:accumulate_if (true, foo, [bar]).

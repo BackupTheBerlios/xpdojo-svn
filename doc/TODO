@@ -1,6 +1,12 @@
 FOR FIRST RELEASE
 -----------------
 
+Various refactoring:
+
+- improve readibility of adlib:fold_files.
+- stop using message passing in file_monitor_acceptance?
+- continue file_monitor_acceptance:complex_test
+
 Continuous file testing:
 
 - removed file.

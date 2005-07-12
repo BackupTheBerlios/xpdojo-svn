@@ -29,15 +29,21 @@
 
 -module(file_monitor_acceptance).
 -compile(export_all).
--import(testing, [use_and_purge_tree/2, receive_one_from/1, wait_for_detectable_modification_time/0]).
+-import(testing, [use_and_purge_tree/2, receive_one_from/1, wait_for_detectable_modification_time/0, receive_one/0]).
+
+notify() ->
+    Self = self(),
+    fun(Event, File_name) ->
+	    Self ! {self(), {Event, File_name}}
+    end.
 
 missing_file_test() ->
     use_and_purge_tree (
       [],
       fun (Dir, _) ->
 	      File_name = filename:join (Dir, "myfile.erl"),
-	      Pid = file_monitor:start ({file, File_name}, self()),
-	      missing = receive_one_from(Pid),
+	      Pid = file_monitor:start (File_name, notify()),
+	      {nonexistent, File_name} = receive_one_from(Pid),
 	      false = is_process_alive (Pid)
       end).
 
@@ -46,25 +52,24 @@ single_file_test() ->
       [{file,"myfile.txt","Hello"}],
       fun (Dir, _) ->
 	      File_name = filename:join (Dir, "myfile.txt"),
-	      Pid = file_monitor:start ({file, File_name}, self()),
-	      found = receive_one_from(Pid),
+	      Pid = file_monitor:start (File_name, notify()),
+	      {found, File_name} = receive_one_from(Pid),
 	      timeout = receive_one_from(Pid),
 	      wait_for_detectable_modification_time(),
 	      file:write_file (File_name, "Goodbye"),
-	      modified = receive_one_from(Pid),
+	      {modified, File_name} = receive_one_from(Pid),
 	      file:delete (File_name),
-	      deleted = receive_one_from(Pid),
+	      {deleted, File_name} = receive_one_from(Pid),
 	      false = is_process_alive (Pid)
       end).
     
-%% Ca y est, j'ai compris... Il manque le suicide...
-
 missing_directory_test() ->
     use_and_purge_tree(
       [],
       fun (Dir, _) ->
-	      Pid = file_monitor:start (filename:join(Dir,"nonexistent"), self()),
-	      missing = receive_one_from (Pid),
+	      File_name = filename:join(Dir,"nonexistent"),
+	      Pid = file_monitor:start (File_name, notify()),
+	      {nonexistent, File_name} = receive_one_from (Pid),
 	      timeout = receive_one_from (Pid),
 	      false = is_process_alive (Pid)
       end).
@@ -74,9 +79,34 @@ single_directory_test() ->
       [{directory,"foo",[]}],
       fun(Dir,_) ->
 	      Directory = filename:join(Dir, "foo"),
-	      Pid = file_monitor:start (Directory, self()),
-	      empty = receive_one_from(Pid),
+	      Pid = file_monitor:start (Directory, notify()),
+	      {found, Directory} = receive_one_from(Pid),
+	      timeout = receive_one_from (Pid),
 	      File_name = filename:join(Directory, "foo.txt"),
 	      file:write_file(File_name,"Hello"),
-	      {new_file, "foo.txt"} = receive_one_from(Pid)
+	      {modified, Directory} = receive_one_from(Pid),
+	      {NewPid, {found, File_name}} = receive_one(),
+	      ok = file:delete (File_name),
+	      {NewPid, {deleted, File_name}} = receive_one(),
+	      ok = file:del_dir (Directory),
+	      {deleted, Directory} = receive_one_from(Pid)
       end).
+
+complex_test() ->
+    use_and_purge_tree (
+      [{file, "f1", ""},
+       {directory, "d1", [{file, "d1f1", ""}]}],
+      fun (Dir, _) ->
+	      Pid = file_monitor:start (Dir, notify()),
+	      {found, Dir} = receive_one_from (Pid),
+	      F1 = filename:join (Dir, "f1"),
+	      {_, {found, F1}} = receive_one(),
+	      D1 = filename:join (Dir, "d1"),
+	      {_, {found, D1}} = receive_one(),
+	      D1F1 = filename:join ([Dir, "d1", "d1f1"]),
+	      {_, {found, D1F1}} = receive_one(),
+	      timeout = receive_one()
+      end).
+
+stop_test() ->
+    test = "Test not yet written: make sure all processes can be stopped...".
