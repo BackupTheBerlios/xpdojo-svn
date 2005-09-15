@@ -47,8 +47,12 @@ module_test() ->
 	"-module (my_module).\n"
 	"-export ([foo/0]).\n"
 	"foo () ->\n"
-	"  ok.\n",
-    Expected = source:module (my_module, [foo]).
+	"ok.\n",
+    Expected = source:module (my_module, [{foo, ["ok."]}]).
+
+module_file_test() ->
+    Expected = {file, "my_module.erl", source:module (my_module, [{foo, ["ok."]}])},
+    Expected = source:module_file (my_module, [{foo, ["ok."]}]).
 
 lines_test() ->
     "Toto\nTiti\nTata\n" = source:lines (["Toto", "Titi", "Tata"]).

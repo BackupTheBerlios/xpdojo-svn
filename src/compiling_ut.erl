@@ -34,15 +34,9 @@
 silent_report(_) ->
     ok.
     
-bar() ->
-    {file,"bar.erl",
-     ["-module(bar).",
-      "-export([foo/0]).",
-      "foo() -> ok."]}.
-
 source_of_module_test () ->
     use_and_purge_tree (
-      [bar ()],
+      [source:module_file(bar, [foo])],
       fun (Dir, _) ->
 	      Source = filename:join (Dir, "bar.erl"),
 	      compile:file (Source),
@@ -53,7 +47,7 @@ source_of_module_test () ->
 modules_from_directory_test() ->
     [] = compiling:modules_from_directory ([], ""),
     use_and_purge_tree (
-      [{directory, "src", [bar()]},
+      [{directory, "src", [source:module_file(bar, [foo])]},
        {directory, "build", []}],
       fun(Dir,_) ->
 	      Src_dir = filename:join (Dir, "src"),

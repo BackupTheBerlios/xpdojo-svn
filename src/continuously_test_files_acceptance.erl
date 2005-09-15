@@ -31,23 +31,11 @@
 -compile(export_all).
 -import(testing, [use_and_purge_tree/2]).
 
-bad_foo() ->
-    {file,"foo.erl",
-     ["-module(foo).",
-      "-export([bar/0]).",
-      "baar() -> ok."]}.
-
 foo() ->
     {file,"foo.erl",
      ["-module(foo).",
       "-export([bar/0]).",
       "bar() -> ok."]}.
-
-bad_foo_ut() ->
-    {file,"foo_ut.erl",
-     ["-module(foo_ut).",
-      "-export([bar_test/0]).",
-      "bar_test() -> nok = foo:bar()."]}.
 
 foo_ut() ->
     {file,"foo_ut.erl",
@@ -316,7 +304,7 @@ custom_report_function_compile_error_test() ->
     Options = 
  	[{report_function, fun my_report_function/1}],
     use_and_purge_tree (
-      [bad_foo()],
+      [source:module_file(foo, [{bar, ["does not compile"]}])],
       fun (Dir,_) ->
  	      [{modules, 1, 0}] = xpdojo:test_files (Dir, Options),
  	      Expected_filename = filename:join (Dir, "foo.erl"),
@@ -350,7 +338,7 @@ custom_report_function_unit_error_test() ->
     Options = 
   	[{report_function, fun my_report_function/1}],
     use_and_purge_tree (
-      [bad_foo_ut()],
+      [source:module_file(foo_ut, [{bar_test, ["nok = foo:bar()."]}])],
       fun(Dir,_)->
   	      [{unit, 1, 0}, {modules, 1, 1}] = xpdojo:test_files (Dir, Options),
 	      ok = receive {compile,_} -> ok after 0 -> compile_message_not_found end,

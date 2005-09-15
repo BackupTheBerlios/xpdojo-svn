@@ -27,7 +27,7 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module (source).
--export ([erlang_files/1, module/2, lines/1]).
+-export ([erlang_files/1, module/2, module_file/2, lines/1]).
 
 erlang_files (Directory) ->
     adlib:fold_files (
@@ -40,13 +40,17 @@ erlang_files (Directory) ->
       [type, extension, absolute_full_name],
       []).
 
-module (Module, [Function]) ->
+module (Module, [{Function, Lines}]) ->
     lines (
       ["-module (" ++ atom_to_list (Module) ++ ").",
        "-export ([" ++ atom_to_list (Function) ++ "/0]).",
-       atom_to_list (Function) ++ " () ->",
-       "  ok."]).
+       atom_to_list (Function) ++ " () ->"
+       | Lines]);
+module (Module, [Function]) ->
+    module (Module, [{Function, ["ok."]}]).
 
+module_file (Module, Functions) ->
+    {file, atom_to_list(Module) ++ ".erl", module (Module, Functions)}.
 lines (Lines) ->
     lines (Lines, []).
 

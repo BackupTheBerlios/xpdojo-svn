@@ -29,7 +29,11 @@
 
 -module(file_monitor_acceptance).
 -compile(export_all).
--import(testing, [use_and_purge_tree/2, receive_one_from/1, wait_for_detectable_modification_time/0, receive_one/0]).
+-import(testing,
+	[use_and_purge_tree/2,
+	 receive_one_from/1,
+	 wait_for_detectable_modification_time/0,
+	 receive_one/0]).
 
 notify() ->
     Self = self(),
