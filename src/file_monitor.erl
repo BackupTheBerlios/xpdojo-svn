@@ -28,16 +28,19 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(file_monitor).
--export([start/2, loop/4]).
+-export([start/2, loop/3]).
 -include_lib("kernel/include/file.hrl").
 
-start (File_name, Notification) ->
-    start (filelib:is_dir(File_name), File_name, Notification).
+start (Name, Notify) ->
+    spawn(?MODULE, loop, [init, functions(Name, Notify), []]).
 
-start (false, File_name, Notification) ->
-    spawn(?MODULE, loop,[File_name, notify_fun (File_name, Notification), init, []]);
-start (true, Directory, Notification) ->
-    spawn (?MODULE, loop, [Directory, spawn_and_notify_fun (Directory, Notification), init, []]).
+functions (Name, Notify) ->
+    functions (filelib:is_dir(Name), Name, Notify).
+
+functions (false, Name, Notify) ->
+    {notify_fun (Name, Notify), file_signature_fun (Name)};
+functions (true, Name, Notify) ->
+    {spawn_and_notify_fun (Name, Notify), directory_signature_fun (Name)}.
 
 notify_fun(File_name, Notification) ->
     fun (Event, State) ->
@@ -65,30 +68,39 @@ spawn_and_notify_fun (File_name, Notification) ->
 	      Processes)
     end.
 
-loop (File_name, Action, Previous_event, State)->
-    case file:read_file_info(File_name) of
-	{error, enoent} ->
-	    Event = nonexistent;
-	{ok, File_info} ->
-	    Event = File_info#file_info.mtime
-    end,
-    Loop = fun (Event2, State2) ->
-		   loop (File_name, Action, Event2, State2)
-	   end,
-    handle_change(Loop, Action, Previous_event, Event, State).
+directory_signature_fun(Name) ->
+    fun() ->
+	    file:list_dir(Name)
+    end.
 
-handle_change (_, Action, init, nonexistent, State) ->
-    Action (nonexistent, State),
+file_signature_fun(Name) ->
+    fun() ->
+	    case file:read_file_info(Name) of
+		{error, enoent} ->
+		    {error, enoent};
+		{ok, File_info} ->
+		    File_info#file_info.mtime
+	    end
+    end.
+
+loop (Signature, Functions = {Handle_change, Compute_signature}, State) ->
+    Loop = fun (New_signature, New_state) ->
+		   loop (New_signature, Functions, New_state)
+	   end,
+    transition (Loop, Handle_change, Signature, Compute_signature(), State).
+
+transition (_, Handle_change, init, {error,enoent}, State) ->
+    Handle_change (nonexistent, State),
     bye;
-handle_change (_, Action, _, nonexistent, State) ->
-    Action (deleted, State),
+transition (_, Handle_change, _, {error,enoent}, State) ->
+    Handle_change (deleted, State),
     bye;
-handle_change (Loop, _, Time, Time, State)->
-    Loop (Time, State);
-handle_change (Loop, Action, init, Time, State) ->
-    New_state = Action (found, State),
-    Loop (Time, New_state);
-handle_change (Loop, Action, _, New_time, State) ->
-    New_state = Action (modified, State),
-    Loop (New_time, New_state).
+transition (Loop, _, Signature, Signature, State)->
+    Loop (Signature, State);
+transition (Loop, Handle_change, init, Signature, State) ->
+    New_state = Handle_change (found, State),
+    Loop (Signature, New_state);
+transition (Loop, Handle_change, _, New_signature, State) ->
+    New_state = Handle_change (modified, State),
+    Loop (New_signature, New_state).
 

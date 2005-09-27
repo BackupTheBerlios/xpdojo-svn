@@ -91,6 +91,7 @@ single_directory_test() ->
 	      {modified, Directory} = receive_one_from(Pid),
 	      {NewPid, {found, File_name}} = receive_one(),
 	      ok = file:delete (File_name),
+	      {modified, Directory} = receive_one_from(Pid),
 	      {NewPid, {deleted, File_name}} = receive_one(),
 	      ok = file:del_dir (Directory),
 	      {deleted, Directory} = receive_one_from(Pid)
