@@ -33,6 +33,7 @@
 	[use_and_purge_tree/2,
 	 receive_one_from/1,
 	 wait_for_detectable_modification_time/0,
+	 purge_messages/1,
 	 receive_one/0]).
 
 notify() ->
@@ -82,11 +83,11 @@ single_directory_test() ->
     use_and_purge_tree (
       [{directory,"foo",[]}],
       fun(Dir,_) ->
-	      Directory = filename:join(Dir, "foo"),
+	      Directory = filename:join (Dir, "foo"),
 	      Pid = file_monitor:start (Directory, notify()),
 	      {found, Directory} = receive_one_from(Pid),
 	      timeout = receive_one_from (Pid),
-	      File_name = filename:join(Directory, "foo.txt"),
+	      File_name = filename:join (Directory, "foo.txt"),
 	      file:write_file(File_name,"Hello"),
 	      {modified, Directory} = receive_one_from(Pid),
 	      {NewPid, {found, File_name}} = receive_one(),
@@ -113,5 +114,19 @@ complex_test() ->
 	      timeout = receive_one()
       end).
 
+
 stop_test() ->
-    test = "Test not yet written: make sure all processes can be stopped...".
+    use_and_purge_tree (
+      [{file, "f1", ""},
+       {directory, "d1", [{file, "d1f1", ""}]}],
+      fun (Dir, _) ->
+	      Pid = file_monitor:start (Dir, notify()),
+	      purge_messages(5000),
+	      
+	      file_monitor:stop(Pid),
+	      timer:sleep(1000),
+	      Directory = filename:join (Dir, "d1"),
+	      File_name = filename:join (Directory, "d1f1"),
+	      file:write_file (File_name, "Hello"),
+	      timeout = receive_one()
+      end).

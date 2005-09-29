@@ -28,11 +28,17 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(file_monitor).
--export([start/2, loop/3]).
+-export([start/2, stop/1, loop/3]).
 -include_lib("kernel/include/file.hrl").
 
 start (Name, Notify) ->
     spawn(?MODULE, loop, [init, functions(Name, Notify), []]).
+
+start_link (Name, Notify) ->
+    spawn_link(?MODULE, loop, [init, functions(Name, Notify), []]).
+
+stop (Pid) ->
+    exit(Pid,stopped_by_user).
 
 functions (Name, Notify) ->
     functions (filelib:is_dir(Name), Name, Notify).
@@ -58,7 +64,7 @@ spawn_and_notify_fun (File_name, Notification) ->
 	      fun ([Name], Acc) ->
 		      case lists:keymember (Name, 2, Acc) of
 			  false ->
-			      NewPid = start (Name, Notification),
+			      NewPid = start_link (Name, Notification),
 			      [{NewPid, Name} | Acc];
 			  true ->
 			      Acc
@@ -84,8 +90,14 @@ file_signature_fun(Name) ->
     end.
 
 loop (Signature, Functions = {Handle_change, Compute_signature}, State) ->
+    process_flag(trap_exit,true),
     Loop = fun (New_signature, New_state) ->
-		   loop (New_signature, Functions, New_state)
+		   receive 
+		       {'EXIT',Pid,stopped_by_user} ->
+			   exit(stopped_by_user)
+ 		   after 0 -> 
+			   loop (New_signature, Functions, New_state)
+ 		   end
 	   end,
     transition (Loop, Handle_change, Signature, Compute_signature(), State).
 

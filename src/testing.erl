@@ -28,7 +28,7 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(testing).
--export([run_functions/1, run_modules/2, use_and_purge_tree/2, wait_for_detectable_modification_time/0, receive_one_from/1, receive_one/0]).
+-export([run_functions/1, run_modules/2, use_and_purge_tree/2, wait_for_detectable_modification_time/0, receive_one_from/1, receive_one/0, purge_messages/1, purge_messages/0]).
 
 run_functions(Functions) when list(Functions) ->
     lists:foldl(
@@ -66,11 +66,14 @@ use_and_purge_tree (Tree, Fun) ->
       end).
 
 purge_messages() ->
+    purge_messages(0).
+
+purge_messages(Tempo) ->
     receive
 	Message ->
 	    io:fwrite("Purged: ~p~n", [Message]),
-	    purge_messages()
-    after 0 ->
+	    purge_messages(Tempo)
+    after Tempo ->
 	    ok
     end.
 
