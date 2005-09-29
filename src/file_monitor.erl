@@ -28,17 +28,39 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(file_monitor).
--export([start/2, stop/1, loop/3]).
+-export([start/2, stop/1, loop/3, start_master/2]).
 -include_lib("kernel/include/file.hrl").
 
 start (Name, Notify) ->
-    spawn(?MODULE, loop, [init, functions(Name, Notify), []]).
+    spawn (?MODULE, start_master, [Name, Notify]).
 
+start_master(Name, Notify) ->
+    process_flag(trap_exit, true),
+    Self = self(),
+    start_link (
+      Name,
+      fun(Event, File) ->
+	      Self ! {child_monitor, Event, File}
+      end),
+    master_loop(Name, Notify).
+
+master_loop(Name, Notify) ->
+    receive
+	{child_monitor, Event, Name} when Event == nonexistent; Event == deleted ->
+	    Notify (Event, Name),
+	    bye;
+	{child_monitor, Event, File} ->
+	    Notify (Event, File),
+	    master_loop(Name, Notify);
+	{'EXIT', _, stopped_by_user} ->
+	    exit (stopped_by_user)
+    end.
+					     
 start_link (Name, Notify) ->
     spawn_link(?MODULE, loop, [init, functions(Name, Notify), []]).
 
 stop (Pid) ->
-    exit(Pid,stopped_by_user).
+    exit (Pid, stopped_by_user).
 
 functions (Name, Notify) ->
     functions (filelib:is_dir(Name), Name, Notify).
@@ -90,11 +112,10 @@ file_signature_fun(Name) ->
     end.
 
 loop (Signature, Functions = {Handle_change, Compute_signature}, State) ->
-    process_flag(trap_exit,true),
     Loop = fun (New_signature, New_state) ->
 		   receive 
 		       {'EXIT',Pid,stopped_by_user} ->
-			   exit(stopped_by_user)
+			   exit (stopped_by_user)
  		   after 0 -> 
 			   loop (New_signature, Functions, New_state)
  		   end

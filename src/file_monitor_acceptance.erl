@@ -90,10 +90,10 @@ single_directory_test() ->
 	      File_name = filename:join (Directory, "foo.txt"),
 	      file:write_file(File_name,"Hello"),
 	      {modified, Directory} = receive_one_from(Pid),
-	      {NewPid, {found, File_name}} = receive_one(),
+	      {found, File_name} = receive_one_from(Pid),
 	      ok = file:delete (File_name),
 	      {modified, Directory} = receive_one_from(Pid),
-	      {NewPid, {deleted, File_name}} = receive_one(),
+	      {deleted, File_name} = receive_one_from(Pid),
 	      ok = file:del_dir (Directory),
 	      {deleted, Directory} = receive_one_from(Pid)
       end).
@@ -106,12 +106,12 @@ complex_test() ->
 	      Pid = file_monitor:start (Dir, notify()),
 	      {found, Dir} = receive_one_from (Pid),
 	      F1 = filename:join (Dir, "f1"),
-	      {_, {found, F1}} = receive_one(),
+	      {found, F1} = receive_one_from(Pid),
 	      D1 = filename:join (Dir, "d1"),
-	      {_, {found, D1}} = receive_one(),
+	      {found, D1} = receive_one_from(Pid),
 	      D1F1 = filename:join ([Dir, "d1", "d1f1"]),
-	      {_, {found, D1F1}} = receive_one(),
-	      timeout = receive_one()
+	      {found, D1F1} = receive_one_from(Pid),
+	      timeout = receive_one_from(Pid)
       end).
 
 
@@ -124,9 +124,8 @@ stop_test() ->
 	      purge_messages(5000),
 	      
 	      file_monitor:stop(Pid),
-	      timer:sleep(1000),
 	      Directory = filename:join (Dir, "d1"),
 	      File_name = filename:join (Directory, "d1f1"),
 	      file:write_file (File_name, "Hello"),
-	      timeout = receive_one()
+	      timeout = receive_one_from(Pid)
       end).
