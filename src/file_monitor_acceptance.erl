@@ -33,8 +33,7 @@
 	[use_and_purge_tree/2,
 	 receive_one_from/1,
 	 wait_for_detectable_modification_time/0,
-	 purge_messages/1,
-	 receive_one/0]).
+	 purge_messages/1]).
 
 notify() ->
     Self = self(),
@@ -114,7 +113,6 @@ complex_test() ->
 	      timeout = receive_one_from(Pid)
       end).
 
-
 stop_test() ->
     use_and_purge_tree (
       [{file, "f1", ""},
@@ -129,3 +127,31 @@ stop_test() ->
 	      file:write_file (File_name, "Hello"),
 	      timeout = receive_one_from(Pid)
       end).
+
+revival_test() ->
+    use_and_purge_tree (	      
+      [{file,"myfile.txt","Hello"}],
+      fun (Dir, _) ->
+	      File_name = filename:join (Dir, "myfile.txt"),
+	      Pid = file_monitor:start (File_name, notify()),
+	      {found, File_name} = receive_one_from(Pid),
+	      file:delete (File_name),
+	      {deleted, File_name} = receive_one_from(Pid),
+	      false = is_process_alive (Pid),
+	      file:write_file (File_name, "Goodbye"),
+	      {found, File_name} = receive_one_from(Pid)
+      end).
+    
+crash_test() ->
+    use_and_purge_tree (
+      [{file, "f1", ""},
+       {directory, "d1", [{file, "d1f1", ""}]}],
+      fun (Dir, _) ->
+	      PreviousProcesses = processes(),
+	      Pid = file_monitor:start (Dir, notify()),
+	      purge_messages(5000),
+	      exit (Pid, kill),
+	      false = is_process_alive (Pid),
+	      same_elements = adlib:compare (PreviousProcesses, processes())
+      end).
+    

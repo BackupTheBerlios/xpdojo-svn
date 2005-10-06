@@ -114,7 +114,7 @@ file_signature_fun(Name) ->
 loop (Signature, Functions = {Handle_change, Compute_signature}, State) ->
     Loop = fun (New_signature, New_state) ->
 		   receive 
-		       {'EXIT',Pid,stopped_by_user} ->
+		       {'EXIT',_,stopped_by_user} ->
 			   exit (stopped_by_user)
  		   after 0 -> 
 			   loop (New_signature, Functions, New_state)
