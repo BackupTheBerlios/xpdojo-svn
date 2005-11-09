@@ -46,11 +46,14 @@ changes_test () ->
 	  end,
 	  [],
 	  [{[], [], []},
-	   {[{"toto.txt", T0}], [{"toto.txt", T0}], []},
-	   {[{"toto.txt", T0}], [{"toto.txt", T1}], [{modified, ["toto.txt"]}]},
+	   {[{"toto.txt", T0}, {"foo", foo}], [{"foo", foo}, {"toto.txt", T0}], []},
+	   {[{"toto.txt", T0}, {"foo", foo}], [{"foo", bar}, {"toto.txt", T1}], [{modified, ["toto.txt", "foo"]}]},
+	   {[], [{"foo.erl", T0}, {"bar.xml", T1}], [{found, ["foo.erl", "bar.xml"]}]},
+	   {[{"foo.erl", T0}, {"bar.xml", T1}], [], [{deleted, ["foo.erl", "bar.xml"]}]},
 	   {[{"toto.txt", T0}, {"titi.xml", T1}], [{"toto.txt", T1}, {"titi.xml", T1}], [{modified, ["toto.txt"]}]},
-	   {[], [{"foo.erl", T0}], [{found, ["foo.erl"]}]},
-	   {[{"toto.txt", T1}], [{"toto.txt", T1}, {"foo.erl", T0}], [{found, ["foo.erl"]}]},
+	   {[{"toto.txt", T1}, {"titi", bla}],
+	    [{"titi", bla}, {"toto.txt", T1}, {"foo.erl", T0}],
+	    [{found, ["foo.erl"]}]},
 	   {[{"toto.txt", T1}], [{"foo.erl", T0}, {"toto.txt", T1}], [{found, ["foo.erl"]}]}
 	  ]).
 

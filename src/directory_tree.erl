@@ -32,16 +32,20 @@
 changes (A,A) ->
     [];
 changes (A,B) ->
-    changes (A, B, [], [], []).
+    changes (lists:keysort(1, A), lists:keysort(1, B), [], [], []).
 
-changes([], [{File, _}], Found, Modified, Deleted) ->
-    changes ([], [], [File|Found], Modified, Deleted);
+changes([], [{File, _} | Tail], Found, Modified, Deleted) ->
+    changes ([], Tail, [File|Found], Modified, Deleted);
+changes ([{File, _} | Tail], [], Found, Modified, Deleted) ->
+    changes (Tail, [], Found, Modified, [File|Deleted]);
 changes([Head|Tail1], [Head|Tail2], Found, Modified, Deleted ) ->
     changes(Tail1, Tail2, Found, Modified, Deleted);
 changes([{File, Signature} | Tail1], [{File, Signature2} | Tail2], Found, Modified, Deleted ) ->
     changes(Tail1, Tail2, Found, [File|Modified], Deleted);
 changes (Tree1 = [{File1, _} | _], [{File2, Signature2} | Tail2], Found, Modified, Deleted) when File1 > File2 ->
     changes (Tree1, Tail2, [File2|Found], Modified, Deleted);
+% changes ([{File1, _} | Tail1], Tree2 = [{File2, _} | _], Found, Modified, Deleted) when File1 < File2 ->
+%     changes (Tail1, Tree2, Found, Modified, [File1|Deleted]);
 changes ([], [], Found, Modified, Deleted) ->
     non_empty_results_from ([{deleted, Deleted}, {found, Found}, {modified, Modified}]).
 
