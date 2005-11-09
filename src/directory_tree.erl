@@ -26,12 +26,28 @@
 %%% IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 %%% POSSIBILITY OF SUCH DAMAGE.
 
--module(directory_tree).
--export([changes/2]).
+-module (directory_tree).
+-export ([changes/2]).
 
-changes(A,A) ->
+changes (A,A) ->
     [];
-changes([], [{File, _}]) ->
-    [{File, found}];
-changes([{File,Signature}], B) ->
-    [{File, modified}].
+changes (A,B) ->
+    changes (A, B, [], [], []).
+
+changes([], [{File, _}], Found, Modified, Deleted) ->
+    changes ([], [], [File|Found], Modified, Deleted);
+changes([Head|Tail1], [Head|Tail2], Found, Modified, Deleted ) ->
+    changes(Tail1, Tail2, Found, Modified, Deleted);
+changes([{File, Signature} | Tail1], [{File, Signature2} | Tail2], Found, Modified, Deleted ) ->
+    changes(Tail1, Tail2, Found, [File|Modified], Deleted);
+changes (Tree1 = [{File1, _} | _], [{File2, Signature2} | Tail2], Found, Modified, Deleted) when File1 > File2 ->
+    changes (Tree1, Tail2, [File2|Found], Modified, Deleted);
+changes ([], [], Found, Modified, Deleted) ->
+    non_empty_results_from ([{deleted, Deleted}, {found, Found}, {modified, Modified}]).
+
+non_empty_results_from (List) ->
+    lists:filter (
+      fun({Atom, []}) -> false;
+	 (_) -> true
+      end,
+      List).

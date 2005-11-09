@@ -47,8 +47,11 @@ changes_test () ->
 	  [],
 	  [{[], [], []},
 	   {[{"toto.txt", T0}], [{"toto.txt", T0}], []},
-	   {[{"toto.txt", T0}], [{"toto.txt", T1}], [{"toto.txt", modified}]},
-	   {[], [{"foo.erl", T0}], [{"foo.erl", found}]}
+	   {[{"toto.txt", T0}], [{"toto.txt", T1}], [{modified, ["toto.txt"]}]},
+	   {[{"toto.txt", T0}, {"titi.xml", T1}], [{"toto.txt", T1}, {"titi.xml", T1}], [{modified, ["toto.txt"]}]},
+	   {[], [{"foo.erl", T0}], [{found, ["foo.erl"]}]},
+	   {[{"toto.txt", T1}], [{"toto.txt", T1}, {"foo.erl", T0}], [{found, ["foo.erl"]}]},
+	   {[{"toto.txt", T1}], [{"foo.erl", T0}, {"toto.txt", T1}], [{found, ["foo.erl"]}]}
 	  ]).
 
 
