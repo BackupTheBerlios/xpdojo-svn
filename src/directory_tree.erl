@@ -32,21 +32,21 @@
 changes (A,A) ->
     [];
 changes (A,B) ->
-    changes (lists:keysort(1, A), lists:keysort(1, B), [], [], []).
+    changes (lists:keysort(1, A), lists:keysort(1, B), no_changes()).
 
-changes([], [{File, _} | Tail], Found, Modified, Deleted) ->
-    changes ([], Tail, [File|Found], Modified, Deleted);
-changes ([{File, _} | Tail], [], Found, Modified, Deleted) ->
-    changes (Tail, [], Found, Modified, [File|Deleted]);
-changes([Head|Tail1], [Head|Tail2], Found, Modified, Deleted ) ->
-    changes(Tail1, Tail2, Found, Modified, Deleted);
-changes([{File, Signature} | Tail1], [{File, Signature2} | Tail2], Found, Modified, Deleted ) ->
-    changes(Tail1, Tail2, Found, [File|Modified], Deleted);
-changes (Tree1 = [{File1, _} | _], [{File2, Signature2} | Tail2], Found, Modified, Deleted) when File1 > File2 ->
-    changes (Tree1, Tail2, [File2|Found], Modified, Deleted);
-% changes ([{File1, _} | Tail1], Tree2 = [{File2, _} | _], Found, Modified, Deleted) when File1 < File2 ->
-%     changes (Tail1, Tree2, Found, Modified, [File1|Deleted]);
-changes ([], [], Found, Modified, Deleted) ->
+changes([], [{File, _} | Tail], Acc) ->
+    changes ([], Tail, append (found, File, Acc) );
+changes ([{File, _} | Tail], [], Acc) ->
+    changes (Tail, [], append (deleted, File, Acc));
+changes([Head|Tail1], [Head|Tail2], Acc ) ->
+    changes(Tail1, Tail2, Acc);
+changes([{File, Signature} | Tail1], [{File, Signature2} | Tail2], Acc) ->
+    changes(Tail1, Tail2, append (modified, File, Acc));
+changes (Tree1 = [{File1, _} | _], [{File2, Signature2} | Tail2], Acc) when File1 > File2 ->
+    changes (Tree1, Tail2, append (found, File2, Acc));
+changes ([{File1, _} | Tail1], Tree2 = [{File2, _} | _], Acc) when File1 < File2 ->
+    changes (Tail1, Tree2, append (deleted, File1, Acc));
+changes ([], [], {Found, Modified, Deleted}) ->
     non_empty_results_from ([{deleted, Deleted}, {found, Found}, {modified, Modified}]).
 
 non_empty_results_from (List) ->
@@ -55,3 +55,13 @@ non_empty_results_from (List) ->
 	 (_) -> true
       end,
       List).
+
+no_changes() ->
+    {[], [], []}.
+
+append (found, File, {Found, Modified, Deleted}) ->
+    {[File|Found], Modified, Deleted};
+append (deleted, File, {Found, Modified, Deleted}) ->
+    {Found, Modified, [File|Deleted]};
+append (modified, File, {Found, Modified, Deleted}) ->
+    {Found, [File|Modified], Deleted}.

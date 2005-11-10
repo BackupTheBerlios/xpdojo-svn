@@ -34,6 +34,8 @@
 changes_test () ->
     {MegaSeconds, Seconds, MicroSeconds} = T0 = erlang:now (),
     T1 = {MegaSeconds, Seconds, MicroSeconds + 1},
+    T2 = {MegaSeconds, Seconds + 1, MicroSeconds},
+    Signatures = [{"toto.txt", T0}, {"foo.erl", T1}],
     [] =
 	lists:foldl(
 	  fun({Tree1, Tree2, Expected}, Acc) ->
@@ -46,15 +48,22 @@ changes_test () ->
 	  end,
 	  [],
 	  [{[], [], []},
-	   {[{"toto.txt", T0}, {"foo", foo}], [{"foo", foo}, {"toto.txt", T0}], []},
-	   {[{"toto.txt", T0}, {"foo", foo}], [{"foo", bar}, {"toto.txt", T1}], [{modified, ["toto.txt", "foo"]}]},
-	   {[], [{"foo.erl", T0}, {"bar.xml", T1}], [{found, ["foo.erl", "bar.xml"]}]},
-	   {[{"foo.erl", T0}, {"bar.xml", T1}], [], [{deleted, ["foo.erl", "bar.xml"]}]},
-	   {[{"toto.txt", T0}, {"titi.xml", T1}], [{"toto.txt", T1}, {"titi.xml", T1}], [{modified, ["toto.txt"]}]},
-	   {[{"toto.txt", T1}, {"titi", bla}],
-	    [{"titi", bla}, {"toto.txt", T1}, {"foo.erl", T0}],
-	    [{found, ["foo.erl"]}]},
-	   {[{"toto.txt", T1}], [{"foo.erl", T0}, {"toto.txt", T1}], [{found, ["foo.erl"]}]}
+	   {Signatures, Signatures, []},
+	   {Signatures, later (Signatures), [{modified, all_files_from (Signatures)}]},
+	   {[], Signatures, [{found, all_files_from (Signatures)}]},
+	   {Signatures, [], [{deleted, all_files_from (Signatures)}]},
+	   {
+	     [{"a.txt", T0}, {"b.xml", T1}, {"c.erl", T1}, {"c2.erl", T2}, {"d.java", T0}, {"e.html", T2}],
+	     [{"a.txt", T0},                {"c2.erl", T2}, {"c.erl", T2},                 {"e.html", T2}, {"f.txt", T2}],
+	     [{deleted, ["d.java", "b.xml"]}, {found, ["f.txt"]}, {modified, ["c.erl"]}]
+	    }
 	  ]).
 
+all_files_from (List) ->
+    [File || {File, Signature} <- List].
 
+later ({MegaSec, Sec, MicroSec}) ->
+    {MegaSec, Sec, MicroSec + 1};
+later (List) ->
+    [{File, later (Time)} || {File, Time} <- List].
+			     
