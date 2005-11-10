@@ -6,6 +6,7 @@ Various refactoring:
 - improve readibility of adlib:fold_files.
 - stop using message passing in file_monitor_acceptance?
 - continue file_monitor_acceptance:complex_test
+- move all directory_tree stuff from adlib to directory_tree module.
 
 Continuous file testing:
 
