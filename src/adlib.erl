@@ -234,6 +234,9 @@ xray(Root,Item,[absolute_full_name|T],Acc) ->
     xray(Root,Item,T,[filename:join(Root,Item)|Acc]);
 xray(Root,Item,[extension|T],Acc) ->
     xray(Root,Item,T,[filename:extension(Item)|Acc]);
+xray(Root,Item,[modification_time|T],Acc) ->
+    {ok, File_info} = file:read_file_info (filename:join (Root, Item)),
+    xray(Root,Item,T,[File_info#file_info.mtime|Acc]);
 xray(_,_,[],Acc) ->
     lists:reverse(Acc).
 
