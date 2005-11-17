@@ -32,6 +32,10 @@ General:
 LATER?
 ------
 
+- run a single test
+- run unit only
+- interrupt build/test (should saving a new file do that?)
+
 General:
 
 - define "Personas"

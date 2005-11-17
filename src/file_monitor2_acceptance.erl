@@ -32,7 +32,6 @@
 -import(testing,
 	[use_and_purge_tree/2,
 	 receive_one_from/1,
-	 wait_for_detectable_modification_time/0,
 	 purge_messages/1]).
 
 notify() ->
@@ -114,11 +113,12 @@ crash_test() ->
       [{file, "f1", ""},
        {directory, "d1", [{file, "d1f1", ""}]}],
       fun (Dir, _) ->
-	      PreviousProcesses = processes(),
+	      Previous_processes = processes(),
 	      Pid = file_monitor2:start (Dir, notify()),
 	      purge_messages(5000),
 	      exit (Pid, kill),
 	      false = is_process_alive (Pid),
-	      same_elements = adlib:compare (PreviousProcesses, processes())
+	      timer:sleep(1000),
+	      same_elements = adlib:compare (Previous_processes, processes())
       end).
     

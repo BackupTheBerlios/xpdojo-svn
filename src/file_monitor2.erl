@@ -37,7 +37,7 @@ loop (Name, Notify, Tree) ->
     case file:read_file_info(Name) of
 	{error, enoent} ->
 	    Notify (nonexistent, Name);
-	{ok, File_info} ->
+	{ok, _} ->
 	    NewTree =
 		adlib:fold_files (
 		  Name,

@@ -40,9 +40,9 @@ changes ([{File, _} | Tail], [], Acc) ->
     changes (Tail, [], append (deleted, File, Acc));
 changes([Head|Tail1], [Head|Tail2], Acc ) ->
     changes(Tail1, Tail2, Acc);
-changes([{File, Signature} | Tail1], [{File, Signature2} | Tail2], Acc) ->
+changes([{File, _} | Tail1], [{File, _} | Tail2], Acc) ->
     changes(Tail1, Tail2, append (modified, File, Acc));
-changes (Tree1 = [{File1, _} | _], [{File2, Signature2} | Tail2], Acc) when File1 > File2 ->
+changes (Tree1 = [{File1, _} | _], [{File2, _} | Tail2], Acc) when File1 > File2 ->
     changes (Tree1, Tail2, append (found, File2, Acc));
 changes ([{File1, _} | Tail1], Tree2 = [{File2, _} | _], Acc) when File1 < File2 ->
     changes (Tail1, Tree2, append (deleted, File1, Acc));
@@ -51,7 +51,7 @@ changes ([], [], {Found, Modified, Deleted}) ->
 
 non_empty_results_from (List) ->
     lists:filter (
-      fun({Atom, []}) -> false;
+      fun({_, []}) -> false;
 	 (_) -> true
       end,
       List).

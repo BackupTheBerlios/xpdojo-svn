@@ -60,7 +60,7 @@ changes_test () ->
 	  ]).
 
 all_files_from (List) ->
-    [File || {File, Signature} <- List].
+    [File || {File, _} <- List].
 
 later ({MegaSec, Sec, MicroSec}) ->
     {MegaSec, Sec, MicroSec + 1};
