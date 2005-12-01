@@ -32,7 +32,6 @@
 -import(testing,
 	[use_and_purge_tree/2,
 	 receive_one_from/1,
-	 wait_for_detectable_modification_time/0,
 	 purge_messages/1]).
 
 notify() ->
@@ -41,32 +40,6 @@ notify() ->
 	    Self ! {self(), {Event, File_name}}
     end.
 
-missing_file_test() ->
-    use_and_purge_tree (
-      [],
-      fun (Dir, _) ->
-	      File_name = filename:join (Dir, "myfile.erl"),
-	      Pid = file_monitor:start (File_name, notify()),
-	      {nonexistent, File_name} = receive_one_from(Pid),
-	      false = is_process_alive (Pid)
-      end).
-
-single_file_test() ->
-    use_and_purge_tree (	      
-      [{file,"myfile.txt","Hello"}],
-      fun (Dir, _) ->
-	      File_name = filename:join (Dir, "myfile.txt"),
-	      Pid = file_monitor:start (File_name, notify()),
-	      {found, File_name} = receive_one_from(Pid),
-	      timeout = receive_one_from(Pid),
-	      wait_for_detectable_modification_time(),
-	      file:write_file (File_name, "Goodbye"),
-	      {modified, File_name} = receive_one_from(Pid),
-	      file:delete (File_name),
-	      {deleted, File_name} = receive_one_from(Pid),
-	      false = is_process_alive (Pid)
-      end).
-    
 missing_directory_test() ->
     use_and_purge_tree(
       [],
@@ -84,17 +57,14 @@ single_directory_test() ->
       fun(Dir,_) ->
 	      Directory = filename:join (Dir, "foo"),
 	      Pid = file_monitor:start (Directory, notify()),
-	      {found, Directory} = receive_one_from(Pid),
 	      timeout = receive_one_from (Pid),
 	      File_name = filename:join (Directory, "foo.txt"),
 	      file:write_file(File_name,"Hello"),
-	      {modified, Directory} = receive_one_from(Pid),
 	      {found, File_name} = receive_one_from(Pid),
 	      ok = file:delete (File_name),
-	      {modified, Directory} = receive_one_from(Pid),
 	      {deleted, File_name} = receive_one_from(Pid),
 	      ok = file:del_dir (Directory),
-	      {deleted, Directory} = receive_one_from(Pid)
+	      timeout = receive_one_from(Pid)
       end).
 
 complex_test() ->
@@ -103,11 +73,8 @@ complex_test() ->
        {directory, "d1", [{file, "d1f1", ""}]}],
       fun (Dir, _) ->
 	      Pid = file_monitor:start (Dir, notify()),
-	      {found, Dir} = receive_one_from (Pid),
 	      F1 = filename:join (Dir, "f1"),
 	      {found, F1} = receive_one_from(Pid),
-	      D1 = filename:join (Dir, "d1"),
-	      {found, D1} = receive_one_from(Pid),
 	      D1F1 = filename:join ([Dir, "d1", "d1f1"]),
 	      {found, D1F1} = receive_one_from(Pid),
 	      timeout = receive_one_from(Pid)
@@ -120,8 +87,8 @@ stop_test() ->
       fun (Dir, _) ->
 	      Pid = file_monitor:start (Dir, notify()),
 	      purge_messages(5000),
-	      
 	      file_monitor:stop(Pid),
+	      timer:sleep(1000),
 	      Directory = filename:join (Dir, "d1"),
 	      File_name = filename:join (Directory, "d1f1"),
 	      file:write_file (File_name, "Hello"),
@@ -133,11 +100,10 @@ revival_test() ->
       [{file,"myfile.txt","Hello"}],
       fun (Dir, _) ->
 	      File_name = filename:join (Dir, "myfile.txt"),
-	      Pid = file_monitor:start (File_name, notify()),
+	      Pid = file_monitor:start (Dir, notify()),
 	      {found, File_name} = receive_one_from(Pid),
 	      file:delete (File_name),
 	      {deleted, File_name} = receive_one_from(Pid),
-	      false = is_process_alive (Pid),
 	      file:write_file (File_name, "Goodbye"),
 	      {found, File_name} = receive_one_from(Pid)
       end).
@@ -147,11 +113,12 @@ crash_test() ->
       [{file, "f1", ""},
        {directory, "d1", [{file, "d1f1", ""}]}],
       fun (Dir, _) ->
-	      PreviousProcesses = processes(),
+	      Previous_processes = processes(),
 	      Pid = file_monitor:start (Dir, notify()),
 	      purge_messages(5000),
 	      exit (Pid, kill),
 	      false = is_process_alive (Pid),
-	      same_elements = adlib:compare (PreviousProcesses, processes())
+	      timer:sleep(1000),
+	      same_elements = adlib:compare (Previous_processes, processes())
       end).
     

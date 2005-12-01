@@ -1,5 +1,4 @@
-%%% Copyright (c) 2004-2005 Dominic Williams, Nicolas Charpentier,
-%%% Fabrice Nourisson, Jacques Couvreur, Virgile Delecolle.
+%%% Copyright (c) 2005 Dominic Williams
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -28,112 +27,51 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(file_monitor).
--export([start/2, stop/1, loop/3, start_master/2]).
+-export([start/2, stop/1, loop/3]).
 -include_lib("kernel/include/file.hrl").
 
 start (Name, Notify) ->
-    spawn (?MODULE, start_master, [Name, Notify]).
+    spawn (?MODULE, loop, [Name, Notify, []]).
 
-start_master(Name, Notify) ->
-    process_flag(trap_exit, true),
-    Self = self(),
-    start_link (
-      Name,
-      fun(Event, File) ->
-	      Self ! {child_monitor, Event, File}
-      end),
-    master_loop(Name, Notify).
-
-master_loop(Name, Notify) ->
-    receive
-	{child_monitor, Event, Name} when Event == nonexistent; Event == deleted ->
-	    Notify (Event, Name),
-	    bye;
-	{child_monitor, Event, File} ->
-	    Notify (Event, File),
-	    master_loop(Name, Notify);
-	{'EXIT', _, stopped_by_user} ->
-	    exit (stopped_by_user)
-    end.
-					     
-start_link (Name, Notify) ->
-    spawn_link(?MODULE, loop, [init, functions(Name, Notify), []]).
-
-stop (Pid) ->
-    exit (Pid, stopped_by_user).
-
-functions (Name, Notify) ->
-    functions (filelib:is_dir(Name), Name, Notify).
-
-functions (false, Name, Notify) ->
-    {notify_fun (Name, Notify), file_signature_fun (Name)};
-functions (true, Name, Notify) ->
-    {spawn_and_notify_fun (Name, Notify), directory_signature_fun (Name)}.
-
-notify_fun(File_name, Notification) ->
-    fun (Event, State) ->
-	    Notification (Event, File_name),
-	    State
-    end.
-
-spawn_and_notify_fun (File_name, Notification) ->
-    fun (Event, _) when Event == nonexistent; Event == deleted->
-	    Notification (Event, File_name);
-	(Event, Processes) when Event == found; Event == modified ->
-	    Notification (Event, File_name),
-	    adlib:fold_files_without_recursion (
-	      File_name,
-	      fun ([Name], Acc) ->
-		      case lists:keymember (Name, 2, Acc) of
-			  false ->
-			      NewPid = start_link (Name, Notification),
-			      [{NewPid, Name} | Acc];
-			  true ->
-			      Acc
-		      end
-	      end,
-	      [absolute_full_name],
-	      Processes)
-    end.
-
-directory_signature_fun(Name) ->
-    fun() ->
-	    file:list_dir(Name)
-    end.
-
-file_signature_fun(Name) ->
-    fun() ->
-	    case file:read_file_info(Name) of
-		{error, enoent} ->
-		    {error, enoent};
-		{ok, File_info} ->
-		    File_info#file_info.mtime
+loop (Name, Notify, Tree) ->
+    case file:read_file_info(Name) of
+	{error, enoent} ->
+	    Notify (nonexistent, Name);
+	{ok, _} ->
+	    NewTree =
+		adlib:fold_files (
+		  Name,
+		  fun ([regular, File_name, Modification_time], Acc) ->
+			  [{File_name, Modification_time} | Acc];
+		      (_, Acc) ->
+			  Acc
+		  end,
+		  [type, absolute_full_name, modification_time],
+		  []),
+	    report (directory_tree:changes (Tree, NewTree), Notify),
+	    receive
+		stop ->
+		    bye
+	    after
+		0 ->
+		    loop (Name, Notify, NewTree)
 	    end
     end.
 
-loop (Signature, Functions = {Handle_change, Compute_signature}, State) ->
-    Loop = fun (New_signature, New_state) ->
-		   receive 
-		       {'EXIT',_,stopped_by_user} ->
-			   exit (stopped_by_user)
- 		   after 0 -> 
-			   loop (New_signature, Functions, New_state)
- 		   end
-	   end,
-    transition (Loop, Handle_change, Signature, Compute_signature(), State).
+report (Changes, Notify) when is_list (Changes) ->
+    lists:foreach (
+      fun (Event) ->
+	      report_event (Event, Notify)
+      end,
+      Changes).
 
-transition (_, Handle_change, init, {error,enoent}, State) ->
-    Handle_change (nonexistent, State),
-    bye;
-transition (_, Handle_change, _, {error,enoent}, State) ->
-    Handle_change (deleted, State),
-    bye;
-transition (Loop, _, Signature, Signature, State)->
-    Loop (Signature, State);
-transition (Loop, Handle_change, init, Signature, State) ->
-    New_state = Handle_change (found, State),
-    Loop (Signature, New_state);
-transition (Loop, Handle_change, _, New_signature, State) ->
-    New_state = Handle_change (modified, State),
-    Loop (New_signature, New_state).
+report_event ({Event, Files}, Notify) ->
+    lists:foreach (
+      fun (File) ->
+	      Notify(Event, File)
+      end,
+      Files).
 
+stop (Pid) ->
+    Pid ! stop.
+		   
