@@ -64,7 +64,9 @@ single_directory_test() ->
 	      ok = file:delete (File_name),
 	      {deleted, File_name} = receive_one_from(Pid),
 	      ok = file:del_dir (Directory),
-	      timeout = receive_one_from(Pid)
+	      timeout = receive_one_from(Pid),
+	      file_monitor:stop(Pid),
+	      timer:sleep(1000)
       end).
 
 complex_test() ->
@@ -77,7 +79,9 @@ complex_test() ->
 	      {found, F1} = receive_one_from(Pid),
 	      D1F1 = filename:join ([Dir, "d1", "d1f1"]),
 	      {found, D1F1} = receive_one_from(Pid),
-	      timeout = receive_one_from(Pid)
+	      timeout = receive_one_from(Pid),
+	      file_monitor:stop(Pid),
+	      timer:sleep(1000)
       end).
 
 stop_test() ->
@@ -89,6 +93,7 @@ stop_test() ->
 	      purge_messages(5000),
 	      file_monitor:stop(Pid),
 	      timer:sleep(1000),
+	      false = is_process_alive (Pid),
 	      Directory = filename:join (Dir, "d1"),
 	      File_name = filename:join (Directory, "d1f1"),
 	      file:write_file (File_name, "Hello"),
@@ -105,7 +110,9 @@ revival_test() ->
 	      file:delete (File_name),
 	      {deleted, File_name} = receive_one_from(Pid),
 	      file:write_file (File_name, "Goodbye"),
-	      {found, File_name} = receive_one_from(Pid)
+	      {found, File_name} = receive_one_from(Pid),
+	      file_monitor:stop(Pid),
+	      timer:sleep(1000)
       end).
     
 crash_test() ->
