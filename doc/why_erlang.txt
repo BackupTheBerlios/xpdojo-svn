@@ -1,0 +1,227 @@
+* XP et programmation fonctionnelle
+
+La programmation fonctionnelle (au sens Haskell, Erlang...) prisente
+plusieurs caractiristiques la rendant trhs adaptie au TDD.
+
+** Contenu
+
+** Introduction aux langages fonctionnels
+
+Les langages fonctionnels utilisent les fonctions plutot que les
+objets ou procedures comme briques de base pour la construction de
+programmes.
+
+FunctionalProgramming is when functions, not objects or procedures,
+are the fundamental building blocks of a program. Functions in this
+sense, not to be confused with CeeLanguage functions which are just
+procedures, are analogous to mathematical equations: they declare a
+relationship between two or more entities.
+
+FunctionalProgramming, however, is not about mathematics but about
+abstraction and reducing complexity: as such, it provides a powerful
+paradigm in which to tackle complex, real-world programming tasks.
+
+FunctionalProgrammingLanguages, which support this style of
+programming, provide at least some of the following features:
+
+- fonde sur l'evaluation d'expressions
+- il n'y a que des valeurs, on ne gere pas la memoire
+- Les fonctions sont des citoyens de premiere classe
+- Fonctions d'ordre superieur
+- Clotures lexicales
+- Programmation par cas ("pattern matching")
+- Single Assignment
+- List Comprehensions
+- Gestion automatique de la memoire (ramasse-miette)
+- Recursive style with tail call optimization
+- Typage dynamique (ou inference de type)
+
+Ces caracteristiques visent a eliminer des causes frequentes de
+defauts de programmation et favoriser des programmes:
+
+- courts et concis
+- expressifs
+
+An important part of (pure) FunctionalProgramming philosophy is
+ReferentialTransparency, which requires writing SideEffectFree?
+functions. In order to encourage this, variables are SingleAssignment,
+or immutable: once they are initialized, their value cannot be
+changed. Arguments to functions may only be passed by value, and
+rather than modify arguments, functions must return new variables.
+
+This alone has several implications on the style of programming
+(compiler implementation and performance aspects are discussed later):
+
+- Since functions cannot modify arguments, they need to be able to
+  return more than one piece of information: therefore tuples and
+  lists are widely used, and may be created on the fly in most
+  FunctionalProgrammingLanguages.
+- Since variables, even within functions, are immutable, writing loops
+  using counters is impossible or at best unwieldy: the dominant style
+  of algorithm is therefore recursive.
+- Since functions cannot modify variables, they cannot store state
+  between successive calls. Thus data and functions are kept
+  completely separate, which is the opposite philosophy to
+  ObjectOriented encapsulation.
+- There may be a need for a data structure to represent the global
+  state and top-level functions that operate on the global state. Most
+  other functions only operate on a small part of the data, so the
+  top-level functions extract pieces of the global state, pass them to
+  lower-level functions, and construct a new global state using the
+  results. (Incidentally, this makes it trivial to instantiate
+  multiple copies of the entire application. For example, maintain a
+  copy of the entire program state as it existed five minutes ago, and
+  revert to it if there is an error.)
+- The emphasis is on writing pure, generic functions which could work
+  in any environment, and choosing actual program behaviour at the top
+  of the call hierarchy. This is in contrast to ObjectOriented
+  programming which encourages pushing behaviour into class methods
+  and making decisions low down by overriding them in
+  subclasses. (Document example moved to FunctionalModeling).
+
+*  Survol du langage Erlang
+
+Erlang est un langage developpe et supporte par Ericsson:
+
+- fonctionnel strict
+- dynamiquement type
+- programmation par cas
+- valeurs immuables
+- programmation concurrente (parallele) a base de processus
+  sequentiels communicants (??? terme francais???)
+
+Erlang is compiled to bytecode which runs in a VirtualMachine. It
+comes complete with development tools (compiler, debugger, profiler),
+libraries and applications including the MnesiaDatabase, an HTTP
+server and a CORBA ORB.
+
+Erlang is developed and supported by the Ericsson ComputerScience lab,
+who has distributed it freely under an OpenSource license since 1998.
+
+<SIMPLIFIER>
+On the other hand, Erlang offers ''processes'', which are like threads
+except that they are completely isolated from each other and may only
+communicate by sending and receiving asynchronous messages. These
+Erlang processes are ideal to represent physical models, and in many
+ways satisfy the NygaardClassification better than most traditional
+ObjectOriented languages. These concurrent processes are polymorphic,
+in that any process which responds to a set of messages (an alphabet,
+in CSP parlance), may be transparently substituted for
+another. Processes also have an identity (a unique, unforgeable
+process id). Code, in the form of functions, may easily be reused by
+different processes.
+
+Erlang also offers ''behaviors'', which are similar to Java
+interfaces: a module conforms to a behavior if it offers a set of
+functions.
+
+So Erlang in fact offers considerable support for modeling the code
+as objects. However, Erlang developers tend to model as processes only
+objects that have behavior (and possibly state), unlike
+SmalltalkLanguage or JavaLanguage developers who must model everything
+as one. In particular, Erlang data types are not objects.
+</SIMPLIFIER>
+
+** Testabilite
+
+- Concision et expressivite des tests
+- Lambda, the ultimate mock
+- testabiliti des programmes multi-"thread"
+
+** Symbiose entre TDD et pattern matching
+
+** Abstraction, expressivite, DSL
+
+** Tableau comparatif des langages fonctionnels p/r a XP
+
+A FAIRE
+Trouver des exemples de code et montrer leur conception via TDD
+Trouver des facons de faire participer l'auditoire
+  - sondage a main levee (qui connait un langage fonctionnel?)
+  - apres un ou deux exemples (avec TDD ping pong) inviter quelqu'un a
+  essayer l'exemple suivant?
+
+Verifier qu'on satisfait les remarques et questions ci-dessous.
+Verifier que ca tient en 90 minutes.
+
+----------
+
+ct: B. Je serais content d'assister ` un atelier pratique dans lequel
+les caractiristiques TDD/PF sont exposies et mises en relief. J'ai
+besoin d'en savoir plus sur la durie proposie de la session et les
+grandes lignes. La PF a une image conceptuelle voire "mathimatique"
+qui bizarrement l'iloigne un peu de TDD a priori. XP a une image trhs
+ancrie java (de par les outils) or pour gagner du temps il n'y a pas
+qu'icrire des tests et refactorer sans relbche : il y a aussi trouver
+un langage (eventuellement pour un sous-ensemble du systeme `
+developper) plus expressif et plus puissant.
+
+ct: OK pour participer ` une prisentation de style tutoriel (ce que
+nous appellons le format "kata" du coder's dojo) en TDD avec
+Erlang. J'ai plusieurs sujets en Erlang ou en Haskell transposable en
+Erlang, type problhmes numiriques simples, prisentables en 30 ou 60mn.
+
+bn: B. Je suis intrigui par "Lambda, the ultimate mock": cela donne
+envie d'en savoir plus. Je connais les lambda Lisp, j'imagine qu'il
+s'agit d'un iquivalent erlang, et je suis curieux de voir comment les
+utiliser pour faire des mock.
+
+-- PhilippeBlayo: A ou B. Cette proposition aborde une classe de
+   langages pluttt qu'un langage particulier, sans nigliger des
+   avantages spicifiques ` Erlang. Je trouve cela trhs sain. Par
+   contre, un atelier me semble risqui. Je pense prifirable une
+   prisentation jalonnie d'exemples. Des questions sur les ditails :
+
+    * Lambda, the ultimate mock : pourrait-on avoir des pricisions sur
+      ce titre un peu inigmatique ? Lambda m'ivoque une fonction au
+      sens du lambda-calcul ou une petite fonction anonyme (lambda le
+      mot-cli de Python). Mais mock fait-il rifirence aux entitis
+      factices ` double tranchant (mock object, mock function) ?
+
+    * Je m'interroge sur une force d'Haskell et Erlang qui n'est pas
+      mis en exergue dans le plan : les listes. Leur souplesse apporte
+      lisibiliti et concision. Peut-jtre ne souhaitez-vous pas le
+      mettre en avant en tant que tel ? L'intirjt susciti dipasse
+      pourtant le cadre des langages fonctionnels : le [x || x <- l,
+      x<9] d'Erlang et Haskell est devenu [x for x in l if x<9] en
+      Python.
+
+Concernant le format, je conviens qu'il vaut mieux, s'agissant de
+langages peu connus et un peu diroutants pour qui ne les a pas dij`
+pratiquis, montrer des exemples (quitte ` les coder partiellement en
+direct) que faire un atelier.
+
+"Lambda, the ultimate mock" prolonge la tradition des articles sur la
+programmation fonctionnelle intitulis "Lambda, the ultimate x". Il
+s'agit en effet des lambda de Lisp ou Python (clttures lexicales),
+qui, pour les fonctions d'ordre supirieur (qui sont le micanisme
+d'abstraction de la PF), jouent trhs avantageusement le rtle de "mock
+object".
+
+Enfin, s'agissant des listes (et comprihensions de listes), elles
+participent effectivement ` la concision et ` l'expressiviti, et
+seront donc ivoquies dans la partie "concision et expressiviti des
+tests" ainsi que dans la dernihre partie (abstraction, expressiviti).
+
+    * -- PhilippeBlayo: A. Une question sur les Domain Specific
+         Language : externes (fichiers de configuration) ou internes ?
+         La lecture du plan me fait pluttt penser aux DSL internes,
+         mais Haskell et Caml sont aussi riputis pour faciliter
+         l'icriture de parsers. Peut-jtre les DSL externes
+         touchent-ils plus ` Pragmatic Programmer qu'` XP ?
+
+Je pensais aux DSL internes, mais ta remarque concernant les parsers
+est exacte et les deux points miritent d'jtre abordis! --
+DominicWilliams
+
+Trouvons un atelier jalonni d'exemples ? Je connais plusieurs
+personnes qui ont appris, peut jtre pas ` programmer en Haskell, mais
+au moins ce qu'est Haskell en assistant ` des prisentations oy le code
+entrait ` l'icran au fur et ` mesure du discours. Le plus d'une
+prisentation, c'est qu'on peut y ajouter des effets de prisentation
+justement (il y a ppt sur Haskell qui est fait comme ga je ne sais
+plus oy) ; le plus d'un atelier, c'est que si quelqu'un dit "et si on
+fait ceci cela", la chose est en question est possible
+immidiatement. Ceci dit, je serais dij` trhs content d'une simple
+prisentation TDD/FP. Et donc A en ce qui me concerne, atelier ou pas
+:-)
