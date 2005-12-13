@@ -28,6 +28,7 @@
 
 -module(filesystem).
 -export([process/0, loop/0]).
+-include_lib("kernel/include/file.hrl").
 
 process() ->
     spawn (?MODULE, loop, []).
@@ -35,7 +36,15 @@ process() ->
 loop() ->
     receive
 	{Pid, Path, [type]} ->
-	    Pid ! {self(), Path, [{type, directory}]}
+	    case file:read_file_info (Path) of
+		{ok, File_info} ->
+		    Pid ! {self(), Path, [{type, File_info#file_info.type}]};
+		{error, Reason} ->
+		    Pid ! {self(), Path, {error, Reason}}
+	    end;
+	{Pid, Path, [directory_content]} ->
+	    {ok, Filename_list} = file:list_dir (Path),
+	    Pid ! {self(), Path, [{directory_content, Filename_list}]}
     end,
     loop().
 				  

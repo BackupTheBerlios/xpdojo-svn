@@ -39,5 +39,37 @@ directory_type_test() ->
 	      {Filesystem, Dir, [{type, directory}]} = receive_one ()
       end).
 	      
+regular_type_test() ->
+    use_and_purge_tree (
+      [{file, "toto", []}],
+      fun (Dir, _) ->
+	      Filesystem = filesystem:process(),
+	      Filename = filename:join (Dir, "toto"),
+	      Filesystem ! {self(), Filename, [type]},
+	      {Filesystem, Filename, [{type, regular}]} = receive_one ()
+      end).
 			   
+enoent_test() ->    
+    use_and_purge_tree (
+      [{file, "toto", []}],
+      fun (Dir, _) ->
+	      Filesystem = filesystem:process(),
+	      Filename = filename:join (Dir, "titi_is_not_toto"),
+	      Filesystem ! {self(), Filename, [type]},
+	      {Filesystem, Filename, {error, enoent}} = receive_one (),
+	      true = is_process_alive (Filesystem)
+      end).
     
+directory_content_test() ->
+    use_and_purge_tree (
+      [{file, "toto", []},
+       {directory, "tmp", [{file, "intmp", []}]},
+       {file, "other.xml", []}],
+      fun (Dir, _) ->
+	      Filesystem = filesystem:process(),
+	      Filesystem ! {self(), Dir, [directory_content]},
+	      {Filesystem, Filename,
+	       [{directory_content, List}]} = receive_one (),
+	      same_elements = adlib:compare (["other.xml", "tmp", "toto"], List)
+      end).
+
