@@ -56,7 +56,8 @@ enoent_test() ->
 	      Filesystem = filesystem:process(),
 	      Filename = filename:join (Dir, "titi_is_not_toto"),
 	      Filesystem ! {self(), Filename, [type]},
-	      {Filesystem, Filename, {error, enoent}} = receive_one (),
+	      {Filesystem, Filename, {error, Reason}} = receive_one (),
+	      true = adlib:contains ({error, enoent}, Reason),
 	      true = is_process_alive (Filesystem)
       end).
     
@@ -72,4 +73,21 @@ directory_content_test() ->
 	       [{directory_content, List}]} = receive_one (),
 	      same_elements = adlib:compare (["other.xml", "tmp", "toto"], List)
       end).
+
+enotdir_test() ->
+    use_and_purge_tree (
+      [{file, "toto", []}],
+      fun (Dir, _) ->
+	      Filesystem = filesystem:process(),
+	      Filename = filename:join (Dir, "toto"),
+	      Filesystem ! {self(), Filename, [directory_content]},
+	      {Filesystem, Filename, {error, Reason}} = receive_one (),
+	      true = adlib:contains ({error, enotdir}, Reason),	      
+	      true = is_process_alive (Filesystem)
+      end).
+
+%%% multiple_requests_test () ->
+%%%     ok = not_coded.
+%%% lifecycle_test() ->
+%%%     ok = not_coded.
 

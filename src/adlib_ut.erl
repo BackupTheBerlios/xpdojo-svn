@@ -321,3 +321,17 @@ compare_test() ->
     {{left_extras, [bla, 1]}, {right_extras, []}} = adlib:compare (["Wow", 1, bla], ["Wow"]),
     {{left_extras, [1]}, {right_extras, [2, "Yo"]}} = adlib:compare (["Wow", 1, bla], ["Wow", 2, "Yo", bla]).
     
+contains_test() ->
+    lists:foldl (
+      fun ({TermToFind, TermToSearch, ExpectedResult}, Index) ->
+	      {Index, ExpectedResult} = {Index, adlib:contains (TermToFind, TermToSearch)},
+	      Index + 1
+      end,
+      1,
+      [{ok, ok, true},
+       {yes, no, false},
+       {ok, {yes, ok}, true},
+       {ok, {{yes, ok}}, true},
+       {{atom1, 3, "hello"}, {4, [ok, {other_atom, 3, "hello"}, 6]}, false},
+       {{atom1, 3, "hello"}, {4, [ok, {atom1, 3, "hello"}, 6]}, true}
+      ]).

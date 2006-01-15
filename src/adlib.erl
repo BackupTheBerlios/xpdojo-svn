@@ -36,7 +36,7 @@
 -export([accumulate_if/3, accumulate_unless/3, is_below_directory/2]).
 -export([update_options/2]).
 -export([normalise_path/1]).
--export([compare/2]).
+-export([compare/2, contains/2]).
 -export([write_term/0]).
 
 -include_lib("kernel/include/file.hrl").
@@ -290,6 +290,15 @@ compare_aux ([HeadLeft| TailLeft], Right, ExtraLeft) ->
       accumulate_unless (lists:member (HeadLeft, Right), HeadLeft, ExtraLeft));
 compare_aux ([], Remaining, ExtraLeft) ->
     {{left_extras, ExtraLeft}, {right_extras, Remaining}}.
+
+contains (Term, Term) ->
+    true;
+contains (Term, Tuple) when is_tuple (Tuple) ->
+    contains (Term, tuple_to_list (Tuple));
+contains (Term, List) when is_list (List) ->
+    lists:any (fun(X) -> contains (Term, X) end, List);
+contains (_, _) ->
+    false.
 
 write_term() ->
     fun(Term) ->

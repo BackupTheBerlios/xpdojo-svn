@@ -27,27 +27,52 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(filesystem).
--export([process/0, loop/0]).
+-export([process/0, start/0, worker_loop/1]).
 -include_lib("kernel/include/file.hrl").
 
 process() ->
-    spawn (?MODULE, loop, []).
+    spawn (?MODULE, start, []).
 
-loop() ->
+start() ->
+    process_flag (trap_exit, true),
+    serve_client (new_worker (self())).
+
+new_worker (Server) ->
+    spawn_link (?MODULE, worker_loop, [Server]).
+
+serve_client (Worker) ->
     receive
-	{Pid, Path, [type]} ->
-	    case file:read_file_info (Path) of
-		{ok, File_info} ->
-		    Pid ! {self(), Path, [{type, File_info#file_info.type}]};
-		{error, Reason} ->
-		    Pid ! {self(), Path, {error, Reason}}
-	    end;
-	{Pid, Path, [directory_content]} ->
-	    {ok, Filename_list} = file:list_dir (Path),
-	    Pid ! {self(), Path, [{directory_content, Filename_list}]}
-    end,
-    loop().
-				  
-	      
-			   
+	{Client, Path, [Command]} ->
+	    Worker ! {Command, Path, Client},
+	    serve_worker (Worker, Path, Client)
+    end.
+
+serve_worker (Worker, Path, Client) ->
+    receive
+	{'EXIT', Worker, Reason} ->
+	    Client ! {self(), Path, {error, Reason}},
+	    serve_client (new_worker (self ()));
+	{Worker, Path, Result, Client} ->
+	    Client ! {self(), Path, Result},
+	    serve_client (Worker)
+    end.
     
+worker_loop (Controller) ->
+    receive
+	{Command, Path, Client} ->
+	    Fun = worker_fun (Command),
+	    Controller ! {self(), Path, [{Command, Fun (Path)}], Client}
+    end,
+    worker_loop (Controller).
+
+worker_fun (type) ->
+    fun (Path) ->
+	    {ok, File_info} = file:read_file_info (Path),
+	    File_info#file_info.type
+    end;
+
+worker_fun (directory_content) ->
+    fun (Path) ->
+	    {ok, Filename_list} = file:list_dir (Path),
+	    Filename_list
+    end.
