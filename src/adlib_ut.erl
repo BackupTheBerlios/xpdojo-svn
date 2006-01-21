@@ -335,3 +335,4 @@ contains_test() ->
        {{atom1, 3, "hello"}, {4, [ok, {other_atom, 3, "hello"}, 6]}, false},
        {{atom1, 3, "hello"}, {4, [ok, {atom1, 3, "hello"}, 6]}, true}
       ]).
+

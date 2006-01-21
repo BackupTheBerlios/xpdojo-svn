@@ -295,8 +295,8 @@ contains (Term, Term) ->
     true;
 contains (Term, Tuple) when is_tuple (Tuple) ->
     contains (Term, tuple_to_list (Tuple));
-contains (Term, List) when is_list (List) ->
-    lists:any (fun(X) -> contains (Term, X) end, List);
+contains (Term, [Head| Tail]) ->
+    contains(Term,  Head) or contains(Term, Tail);
 contains (_, _) ->
     false.
 
@@ -304,3 +304,4 @@ write_term() ->
     fun(Term) ->
 	    io:fwrite("~p~n",[Term])
     end.
+
