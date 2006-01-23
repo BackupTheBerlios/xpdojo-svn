@@ -27,11 +27,14 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(filesystem).
--export([process/0, start/0, worker_loop/1]).
+-export([start/0, worker_loop/1, serve/1]).
 -include_lib("kernel/include/file.hrl").
 
-process() ->
-    spawn (?MODULE, start, []).
+serve (Fun) ->
+    Server = spawn (?MODULE, start, []),
+    Result = Fun (Server),
+    Server ! stop,
+    Result.
 
 start() ->
     process_flag (trap_exit, true),
@@ -44,7 +47,9 @@ serve_client (Worker) ->
     receive
 	{Client, Path, [Command]} ->
 	    Worker ! {Command, Path, Client},
-	    serve_worker (Worker, Path, Client)
+	    serve_worker (Worker, Path, Client);
+	stop ->
+	    Worker ! stop
     end.
 
 serve_worker (Worker, Path, Client) ->
@@ -61,9 +66,11 @@ worker_loop (Controller) ->
     receive
 	{Command, Path, Client} ->
 	    Fun = worker_fun (Command),
-	    Controller ! {self(), Path, [{Command, Fun (Path)}], Client}
-    end,
-    worker_loop (Controller).
+	    Controller ! {self(), Path, [{Command, Fun (Path)}], Client},
+	    worker_loop (Controller);
+	stop ->
+	    bye
+    end.
 
 worker_fun (type) ->
     fun (Path) ->

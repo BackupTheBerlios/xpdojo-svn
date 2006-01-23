@@ -30,64 +30,58 @@
 -compile(export_all).
 -import(testing, [use_and_purge_tree/2, receive_one/0]).
 
-directory_type_test() ->
-    use_and_purge_tree (
-      [],
-      fun (Dir, _) ->
-	      Filesystem = filesystem:process(),
-	      Filesystem ! {self(), Dir, [type]},
-	      {Filesystem, Dir, [{type, directory}]} = receive_one ()
-      end).
-	      
-regular_type_test() ->
-    use_and_purge_tree (
-      [{file, "toto", []}],
-      fun (Dir, _) ->
-	      Filesystem = filesystem:process(),
-	      Filename = filename:join (Dir, "toto"),
-	      Filesystem ! {self(), Filename, [type]},
-	      {Filesystem, Filename, [{type, regular}]} = receive_one ()
-      end).
-			   
-enoent_test() ->    
-    use_and_purge_tree (
-      [{file, "toto", []}],
-      fun (Dir, _) ->
-	      Filesystem = filesystem:process(),
-	      Filename = filename:join (Dir, "titi_is_not_toto"),
-	      Filesystem ! {self(), Filename, [type]},
-	      {Filesystem, Filename, {error, Reason}} = receive_one (),
-	      true = adlib:contains ({error, enoent}, Reason),
-	      true = is_process_alive (Filesystem)
-      end).
-    
-directory_content_test() ->
-    use_and_purge_tree (
-      [{file, "toto", []},
-       {directory, "tmp", [{file, "intmp", []}]},
-       {file, "other.xml", []}],
-      fun (Dir, _) ->
-	      Filesystem = filesystem:process(),
-	      Filesystem ! {self(), Dir, [directory_content]},
-	      {Filesystem, Filename,
-	       [{directory_content, List}]} = receive_one (),
-	      same_elements = adlib:compare (["other.xml", "tmp", "toto"], List)
-      end).
+filesystem_test() ->
+    lists:foreach (
+      fun (Test) ->
+	      use_and_purge_tree (
+		[{file, "toto", []},
+		 {directory, "tmp", [{file, "intmp", []}]},
+		 {file, "other.xml", []}],
+		fun (Dir, _) ->
+			Previous_processes = processes(),
+			Pid = filesystem:serve (
+				fun (F) ->
+					Test (F, Dir),
+					true = is_process_alive (F),
+					F
+				end),
+			timer:sleep(1000),
+			false = is_process_alive (Pid),
+			same_elements = adlib:compare (Previous_processes, processes())
+		end)
+      end,
+      [fun directory_type/2,
+       fun regular_type/2,
+       fun enoent/2,
+       fun directory_content/2,
+       fun enotdir/2]).
 
-enotdir_test() ->
-    use_and_purge_tree (
-      [{file, "toto", []}],
-      fun (Dir, _) ->
-	      Filesystem = filesystem:process(),
-	      Filename = filename:join (Dir, "toto"),
-	      Filesystem ! {self(), Filename, [directory_content]},
-	      {Filesystem, Filename, {error, Reason}} = receive_one (),
-	      true = adlib:contains ({error, enotdir}, Reason),	      
-	      true = is_process_alive (Filesystem)
-      end).
+directory_type (Filesystem, Dir) ->
+    Filesystem ! {self(), Dir, [type]},
+    {Filesystem, Dir, [{type, directory}]} = receive_one ().
+	      
+regular_type (Filesystem, Dir) ->			   
+    Filename = filename:join (Dir, "toto"),
+    Filesystem ! {self(), Filename, [type]},
+    {Filesystem, Filename, [{type, regular}]} = receive_one ().
+
+enoent (Filesystem, Dir) ->
+    Filename = filename:join (Dir, "titi_is_not_toto"),
+    Filesystem ! {self(), Filename, [type]},
+    {Filesystem, Filename, {error, Reason}} = receive_one (),
+    true = adlib:contains ({error, enoent}, Reason).
+    
+directory_content (Filesystem, Dir) ->
+    Filesystem ! {self(), Dir, [directory_content]},
+    {Filesystem, Dir,
+     [{directory_content, List}]} = receive_one (),
+    same_elements = adlib:compare (["other.xml", "tmp", "toto"], List).
+
+enotdir (Filesystem, Dir) ->
+    Filename = filename:join (Dir, "toto"),
+    Filesystem ! {self(), Filename, [directory_content]},
+    {Filesystem, Filename, {error, Reason}} = receive_one (),
+    true = adlib:contains ({error, enotdir}, Reason).
 
 %%% multiple_requests_test () ->
 %%%     ok = not_coded.
-%%% lifecycle_test() ->
-%%%     ok = not_coded.
-
