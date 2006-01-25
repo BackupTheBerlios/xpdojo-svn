@@ -333,6 +333,7 @@ contains_test() ->
        {ok, {yes, ok}, true},
        {ok, {{yes, ok}}, true},
        {{atom1, 3, "hello"}, {4, [ok, {other_atom, 3, "hello"}, 6]}, false},
-       {{atom1, 3, "hello"}, {4, [ok, {atom1, 3, "hello"}, 6]}, true}
+       {{atom1, 3, "hello"}, {4, [ok, {atom1, 3, "hello"}, 6]}, true},
+       {[1, 2, 3], [{1, 2}, 3], false}
       ]).
 

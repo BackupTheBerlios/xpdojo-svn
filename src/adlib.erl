@@ -291,14 +291,21 @@ compare_aux ([HeadLeft| TailLeft], Right, ExtraLeft) ->
 compare_aux ([], Remaining, ExtraLeft) ->
     {{left_extras, ExtraLeft}, {right_extras, Remaining}}.
 
-contains (Term, Term) ->
+contains (Sought_term, Term_to_search) ->
+    contains (Sought_term, Term_to_search, []).
+
+contains (Term, Term, _) ->
     true;
-contains (Term, Tuple) when is_tuple (Tuple) ->
-    contains (Term, tuple_to_list (Tuple));
-contains (Term, [Head| Tail]) ->
-    contains(Term,  Head) or contains(Term, Tail);
-contains (_, _) ->
-    false.
+contains (Term, Tuple, Rest) when is_tuple (Tuple) ->
+    contains (Term, tuple_to_list (Tuple), Rest);
+contains (Term, [], [Head | Tail]) ->
+    contains (Term, Head, Tail);
+contains (Term, [Head | Tail], Rest) ->
+    contains (Term, Head, Tail ++ Rest);
+contains (_, _, []) ->
+    false;
+contains (Term, _, [Head | Tail]) ->
+    contains (Term, Head, Tail).
 
 write_term() ->
     fun(Term) ->
