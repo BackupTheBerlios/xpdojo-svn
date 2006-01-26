@@ -185,64 +185,96 @@ begins_with(Token) ->
 	    begins_with(String,Token)
     end.
 
-fold_files(Root,Action,Options,Acc) when list(Root) ->
-    list_dir_and_call_ff_6_with (
-      Root, Action, Options, Acc,
-      fun (Item) ->
-	      xray (Root, Item, [type], [])
+fold_files (Root, Action, Options, Acc) when is_list(Root) ->
+    filesystem:serve (
+      fun (F) ->
+	      fold_files (Root, Action, Options, Acc, F)
       end).
 
-fold_files_without_recursion (Root,Action,Options,Acc) when list(Root) ->
+fold_files_without_recursion (Root, Action, Options, Acc) when is_list (Root) ->
+    filesystem:serve (
+      fun (F) ->
+	      fold_files_without_recursion (Root, Action, Options, Acc, F)
+      end).
+
+fold_files (Root, Action, Options, Acc, Filesystem) when is_list (Root) ->
     list_dir_and_call_ff_6_with (
-      Root, Action, Options, Acc,
+      Root, Action, Options, Acc, Filesystem,
+      fun (Item) ->
+	      xray (Root, Item, [type], [], Filesystem)
+      end).
+
+fold_files_without_recursion (Root, Action, Options, Acc, Filesystem) when is_list (Root) ->
+    list_dir_and_call_ff_6_with (
+      Root, Action, Options, Acc, Filesystem,
       fun (_) ->
 	      ignored
       end).
 
-list_dir_and_call_ff_6_with (Root, Action, Options, Acc, Fun) ->
-    {ok,Content} = file:list_dir(Root),
-    lists:foldl (
-      fun (Item, Acc2) ->
-	      fold_files (
-		Fun(Item),
-		Root,
-		Item,
-		Options,
-		Action,
-		Acc2)
-      end,
-      Acc,
-      Content).
+list_dir_and_call_ff_6_with (Root, Action, Options, Acc, Filesystem, Fun) ->
+    Filesystem ! {self(), Root, [directory_content]},
+    receive
+	{Filesystem, Root, [{directory_content, Content}]} ->
+	    lists:foldl (
+	      fun (Item, Acc2) ->
+		      fold_files (
+			Fun(Item),
+			Root,
+			Item,
+			Options,
+			Action,
+			Acc2,
+		       Filesystem)
+	      end,
+	      Acc,
+	      Content);
+	Other ->
+	    for_the_moment = Other
+    end.
 
-fold_files ([directory], Root, Item, Options, Action, Acc) ->
+fold_files ([directory], Root, Item, Options, Action, Acc, Filesystem) ->
     fold_files (
       filename:join (Root, Item),
       Action,
       Options,
-      Action (xray (Root, Item, Options, []), Acc));
-fold_files (Error = {error, _}, _, _, _, Action, Acc) ->
+      Action (xray (Root, Item, Options, [], Filesystem), Acc),
+      Filesystem);
+fold_files (Error = {error, _}, _, _, _, Action, Acc, Filesystem) ->
     Action (Error, Acc);
-fold_files (_Type,Root,Item,Options,Action,Acc) ->
-    Action(xray(Root,Item,Options,[]),Acc).
+fold_files (_Type,Root,Item,Options,Action,Acc, Filesystem) ->
+    Action (xray (Root, Item, Options, [], Filesystem), Acc).
 
-xray(Root,Item,[type|T],Acc) ->
-    Result = file:read_file_info (filename:join (Root, Item)),
-    continue_if_ok ( Result, Root, Item, T, Acc);
-xray(Root,Item,[relative_full_name|T],Acc) ->
-    xray(Root,Item,T,[Item|Acc]);
-xray(Root,Item,[absolute_full_name|T],Acc) ->
-    xray(Root,Item,T,[filename:join(Root,Item)|Acc]);
-xray(Root,Item,[extension|T],Acc) ->
-    xray(Root,Item,T,[filename:extension(Item)|Acc]);
-xray(Root,Item,[modification_time|T],Acc) ->
+xray(Root,Item,[type|T],Acc, Filesystem) ->
+%%     Result = file:read_file_info (filename:join (Root, Item)),
+%%     continue_if_ok ( Result, Root, Item, T, Acc, Filesystem);
+    Filename = filename:join (Root, Item),
+    Filesystem ! {self(), Filename, [type]},
+    receive
+	{Filesystem, Filename, [{type, Type}]} ->
+	    xray (Root, Item, T, [Type | Acc], Filesystem);
+	{Filesystem, Filename, {error, Error}} ->
+	    {error, Error};
+	Other ->
+	    Other
+    after
+	 2000 ->
+	    timeout
+    end;
+xray(Root,Item,[relative_full_name|T],Acc, Filesystem) ->
+    xray (Root, Item, T, [Item | Acc], Filesystem);
+xray(Root,Item,[absolute_full_name|T],Acc, Filesystem) ->
+    xray (Root, Item, T, [filename:join (Root, Item) | Acc], Filesystem);
+xray(Root,Item,[extension|T],Acc, Filesystem) ->
+    xray (Root, Item, T, [filename:extension (Item) | Acc], Filesystem);
+xray(Root,Item,[modification_time|T],Acc, Filesystem) ->
     {ok, File_info} = file:read_file_info (filename:join (Root, Item)),
-    xray(Root,Item,T,[File_info#file_info.mtime|Acc]);
-xray(_,_,[],Acc) ->
+    xray (Root, Item, T, [File_info#file_info.mtime | Acc], Filesystem);
+xray(_, _, [], Acc, _) ->
     lists:reverse(Acc).
 
-continue_if_ok ( {ok, File_info}, Root, Item, T, Acc) ->
-    xray (Root, Item, T, [File_info#file_info.type | Acc]);
-continue_if_ok ( Error = {error, _}, _, _, _, _) ->
+continue_if_ok ( {ok, File_info}, Root, Item, T, Acc, Filesystem) ->
+    xray (Root, Item, T, [File_info#file_info.type | Acc], Filesystem);
+continue_if_ok ( Error = {error, _}, _, _, _, _, _) ->
     Error.
 
 is_below_directory (Path1, Path2) ->

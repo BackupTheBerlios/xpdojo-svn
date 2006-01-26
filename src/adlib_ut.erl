@@ -270,7 +270,8 @@ fold_files_ignore_bad_links_test() ->
 			    end,
 			    [type, relative_full_name],
 			    []),
-		      same_elements = adlib:compare ([{error,enoent}, {regular, "toto.txt"}], Result);
+		      [Error, {regular, "toto.txt"}] = Result,
+		      true = adlib:contains ({error, enoent}, Error);
 		  {error, enotsup} ->
 		      ok
 	      end

@@ -30,7 +30,7 @@
 -compile(export_all).
 -import(testing, [use_and_purge_tree/2, receive_one/0]).
 
-filesystem_test() ->
+commands_test() ->
     lists:foreach (
       fun (Test) ->
 	      use_and_purge_tree (
@@ -83,5 +83,24 @@ enotdir (Filesystem, Dir) ->
     {Filesystem, Filename, {error, Reason}} = receive_one (),
     true = adlib:contains ({error, enotdir}, Reason).
 
+%% serve_a_crashing_client_test () ->
+%%     Previous_processes = processes(),
+%%     Pid = spawn (
+%% 	    fun () ->
+%% 		    filesystem:serve (
+%% 		      fun (F) ->
+%% 			      F ! {self(), "Blah", [type]},
+%% 			      timer:sleep (1000), % enough to get killed...
+%% 			      receive
+%% 				  {F, "Blah", Result} ->
+%% 				      Result
+%% 			      end
+%% 		      end)
+%% 	    end),
+%%     exit (Pid, kill),
+%%     false = is_process_alive (Pid),
+%%     timer:sleep(3000),
+%%     same_elements = adlib:compare (Previous_processes, processes()).
+%%
 %%% multiple_requests_test () ->
 %%%     ok = not_coded.
