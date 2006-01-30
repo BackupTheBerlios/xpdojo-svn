@@ -1,4 +1,4 @@
-%%% Copyright (c) 2005 Dominic Williams
+%%% copyright (c) 2005 Dominic Williams
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -82,25 +82,38 @@ enotdir (Filesystem, Dir) ->
     Filesystem ! {self(), Filename, [directory_content]},
     {Filesystem, Filename, {error, Reason}} = receive_one (),
     true = adlib:contains ({error, enotdir}, Reason).
+serve_a_crashing_fun_test () ->
+    Previous_processes = processes(),
+    catch filesystem:serve (fun (_) -> crash = suicide end),
+    timer:sleep (1000),
+    same_elements = adlib:compare (Previous_processes, processes()).
+    
+serve_a_crashing_client_test () ->
+    Previous_processes = processes(),
+    Test = self(),
+    Spawned =
+	spawn (
+	  fun () ->
+		  filesystem:serve (
+		    fun (F) ->
+			    F ! {self(), "Blah", [type]},
+			    Test ! {self(), file_system_server_ready},
+			    receive
+				{Test, finish_now_please} ->
+				    finished
+			    end
+		    end)
+	  end),
+    receive
+	{File_system_server, file_system_server_ready} ->
+	    exit (Spawned, kill),
+	    false = is_process_alive (Spawned),
+	    File_system_server ! {self(), finish_now_please},
+	    timer:sleep(2000),
+	    same_elements = adlib:compare (Previous_processes, processes())
+    after 3000 ->
+	    throw (timeout)
+    end.
 
-%% serve_a_crashing_client_test () ->
-%%     Previous_processes = processes(),
-%%     Pid = spawn (
-%% 	    fun () ->
-%% 		    filesystem:serve (
-%% 		      fun (F) ->
-%% 			      F ! {self(), "Blah", [type]},
-%% 			      timer:sleep (1000), % enough to get killed...
-%% 			      receive
-%% 				  {F, "Blah", Result} ->
-%% 				      Result
-%% 			      end
-%% 		      end)
-%% 	    end),
-%%     exit (Pid, kill),
-%%     false = is_process_alive (Pid),
-%%     timer:sleep(3000),
-%%     same_elements = adlib:compare (Previous_processes, processes()).
-%%
 %%% multiple_requests_test () ->
 %%%     ok = not_coded.

@@ -31,11 +31,25 @@
 -include_lib("kernel/include/file.hrl").
 
 serve (Fun) ->
-    Server = spawn (?MODULE, start, []),
-    Result = Fun (Server),
-    Server ! stop,
-    Result.
-
+    Caller = self(),
+    Spawned =
+	spawn (
+	  fun() ->
+		  Server = spawn (?MODULE, start, []),
+		  case (catch Fun (Server)) of
+		      {'EXIT', Reason} ->
+			  Return_fun = fun () -> exit(Reason) end;
+		      Other ->
+			  Return_fun = fun () -> Other end
+		  end,
+		  Server ! stop,
+		  Caller ! {self(), Return_fun}
+	  end),
+    receive
+	{Spawned, Return} when is_function (Return) ->
+	    Return()
+    end.
+	      
 start() ->
     process_flag (trap_exit, true),
     serve_client (new_worker (self())).
