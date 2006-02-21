@@ -6,9 +6,9 @@ La pratique de l'eXtreme Programming amène des façons nouvelles de programmer,
 L'objectif principal du projet XP Dojo est de fournir un outil simple et autonome spécifiquement adapté aux pratiques XP, notamment :
 
 - la programmation pilotée par les tests unitaires et de recette;
-- le développement en tandem (pair programming);
+- l'intégration continue;
 - le remaniement (refactoring);
-- l'intégration continue.
+- le développement en tandem (pair programming).
 
 En outre, le projet explore des façons nouvelles de pratiquer XP nécessitant des outils spécifiques, par exemple :
 

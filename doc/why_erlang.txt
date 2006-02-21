@@ -1,3 +1,4 @@
+-*- mode: text; fill-column: 55 -*-
 (utf-8)
 
 * XP et programmation fonctionnelle
@@ -131,10 +132,13 @@ SmalltalkLanguage or JavaLanguage developers who must model everything
 as one. In particular, Erlang data types are not objects.
 </SIMPLIFIER>
 
+** Robustesse et exactitude
+
 ** Testabilité
 
 - Concision et expressivité des tests
 - Lambda, the ultimate mock
+
 
 - testabilité des programmes multi-"thread"
 Expliquer que le code multithread ne PEUT PAS être testé, même si on peut limiter les dégâts
@@ -144,6 +148,11 @@ Evoquer aussi les faiblesses conceptuelles? (anti encapsulation, OCP, YAGNI)
 Expliquer fonctionnement erlang
 Démontrer sa testabilité
 Exemple (philosophes? sudoku?)
+
+** Plasticité
+
+La transparence référentielle facilite le remaniement
+
 
 ** Symbiose entre TDD et pattern matching
  cf fibonacci.erl : 
@@ -180,6 +189,8 @@ Exemple: parser combinators? tests de recette xpdojo ?
 
 ** Tableau comparatif des langages fonctionnels p/r a XP
 
+(indiquer typage dynamique ou statique)
+
 
 
 A FAIRE
@@ -209,6 +220,15 @@ fibonacci_test() ->
     0 = fibonacci:fibonacci(0),
     1 = fibonacci:fibonacci(1),
     1 = fibonacci:fibonacci(2).
+
+** Typage statique ou dynamique (laisser en question...)
+
+Typage statique utile pour:
+1) documenter
+2) vérifier des choses à la compilation
+
+==> devient superflu avec TDD
+
 
 
     
