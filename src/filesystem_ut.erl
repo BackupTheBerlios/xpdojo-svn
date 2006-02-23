@@ -54,7 +54,8 @@ commands_test() ->
        fun regular_type/2,
        fun enoent/2,
        fun directory_content/2,
-       fun enotdir/2]).
+       fun enotdir/2,
+       modification_time (erlang:localtime ())]).
 
 directory_type (Filesystem, Dir) ->
     Filesystem ! {self(), Dir, [type]},
@@ -82,9 +83,19 @@ enotdir (Filesystem, Dir) ->
     Filesystem ! {self(), Filename, [directory_content]},
     {Filesystem, Filename, {error, Reason}} = receive_one (),
     true = adlib:contains ({error, enotdir}, Reason).
+
+modification_time (Before) ->
+    fun (Filesystem, Dir) ->
+	    Filesystem ! {self(), Dir, [modification_time]},
+	    {Filesystem, Dir, [{modification_time, Time}]} = receive_one(),
+	    {1, Before, Time, true} = {1, Before, Time, Before =< Time},
+	    After = erlang:localtime (),
+	    {2, Time, After, true} = {2, Time, After, Time =< After}
+    end.
+    
 serve_a_crashing_fun_test () ->
     Previous_processes = processes(),
-    catch filesystem:serve (fun (_) -> crash = suicide end),
+    catch filesystem:serve (fun (_) -> exit (suicide) end),
     timer:sleep (1000),
     same_elements = adlib:compare (Previous_processes, processes()).
     

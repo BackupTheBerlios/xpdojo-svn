@@ -89,15 +89,15 @@ use_tree_test() ->
     {error,enoent} = file:read_file_info(Tmp_dirname),
 
     case catch adlib:use_tree(Tmp_dirname,Tree, fun_that_explodes()) of
-	{'EXIT',{{badmatch,true},_}} ->
+	{'EXIT', suicide} ->
 	    ok
     end,
     {error,enoent} = file:read_file_info(Tmp_dirname),
     ok.
 
 fun_that_explodes () ->    
-    fun (_Dir, _UsedTree) ->
-	    false = true
+    fun (_, _) ->
+	    exit (suicide)
     end.
 
 use_tree_and_cleanup_test () ->
@@ -110,7 +110,7 @@ use_tree_and_cleanup_test () ->
 		 fun (Dir, _) ->
 			 put (cleanup_called, {true, Dir})
 		 end) of
-	{'EXIT',{{badmatch,true},_}} ->
+	{'EXIT', suicide} ->
 	    ok
     end,
     {true, Tmp_dirname} = get (cleanup_called).
@@ -264,14 +264,11 @@ fold_files_ignore_bad_links_test() ->
 			  adlib:fold_files (
 			    Dir,
 			    fun ([Type, Name], Acc) ->
-				    [{Type,Name} | Acc];
-				(Error = {error, _}, Acc) ->
-				    [Error | Acc]
+				    [{Type,Name} | Acc]
 			    end,
 			    [type, relative_full_name],
 			    []),
-		      [Error, {regular, "toto.txt"}] = Result,
-		      true = adlib:contains ({error, enoent}, Error);
+		      [{regular, "toto.txt"}] = Result;
 		  {error, enotsup} ->
 		      ok
 	      end
@@ -295,6 +292,47 @@ fold_files_non_recursive_test() ->
 	      Expected = ["toto", "titi.xml", "subdir"],
 	      same_elements = adlib:compare (Expected, Result)
       end).
+
+fake_file_system (Paths = {Dir, File, Disappeared_file, Subdir, Subfile}) ->
+    Absolute_disappeared_file = filename:join (Dir, Disappeared_file),
+    Absolute_subdir = filename:join (Dir, Subdir),
+    receive
+	{Client, Dir, [directory_content]} ->
+	    Client ! {self(), Dir, [{directory_content, [File, Disappeared_file, Subdir]}]},
+	    fake_file_system (Paths);
+	{Client, Absolute_subdir, [directory_content]} ->
+	    Client ! {self(), Absolute_subdir, [{directory_content, [Subfile]}]},
+	    fake_file_system (Paths);
+	{Client, Absolute_disappeared_file, [type]} ->
+	    Client ! {self(), Absolute_disappeared_file, {error, enoent}},
+	    fake_file_system (Paths);
+	{Client, A_dir, [type]} when A_dir == Dir; A_dir == Absolute_subdir ->
+	    Client ! {self(), A_dir, [{type, directory}]},
+	    fake_file_system (Paths);
+	{Client, A_file, [type]} ->
+	    Client ! {self(), A_file, [{type, regular}]},
+	    fake_file_system (Paths);
+	stop ->
+	    bye
+    end.
+
+fold_files_that_disappear_test () ->
+    Dir = "/tmp",
+    File = "foo",
+    Disappeared_file = "ghost",
+    Subdir = "subdir",
+    Subfile = "bar",
+    Expected = [File, Subdir, Subfile],
+    Fake_file_system = spawn (?MODULE, fake_file_system, [{Dir, File, Disappeared_file, Subdir, Subfile}]),
+    Result =
+	adlib:fold_files (
+	  Dir,
+	  fun ([_, Name], Acc) -> [Name | Acc] end,
+	  [type, relative_full_name],
+	  [],
+	  Fake_file_system),
+    Fake_file_system ! stop,
+    same_elements = adlib:compare (Expected, Result).
 
 accumulate_if_test () ->
     [] = adlib:accumulate_if (false, foo, []),

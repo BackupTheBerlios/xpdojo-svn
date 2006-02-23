@@ -26,9 +26,10 @@
 %%% IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 %%% POSSIBILITY OF SUCH DAMAGE.
 
--module(filesystem).
--export([start/0, worker_loop/1, serve/1]).
--include_lib("kernel/include/file.hrl").
+-module (filesystem).
+-export ([start/0, worker_loop/1, serve/1]).
+-export ([directory_content/1, type/1, modification_time/1]).
+-include_lib ("kernel/include/file.hrl").
 
 serve (Fun) ->
     Caller = self(),
@@ -38,15 +39,15 @@ serve (Fun) ->
 		  Server = spawn (?MODULE, start, []),
 		  case (catch Fun (Server)) of
 		      {'EXIT', Reason} ->
-			  Return_fun = fun () -> exit(Reason) end;
+			  Return = fun () -> exit(Reason) end;
 		      Other ->
-			  Return_fun = fun () -> Other end
+			  Return = fun () -> Other end
 		  end,
 		  Server ! stop,
-		  Caller ! {self(), Return_fun}
+		  Caller ! {self(), Return}
 	  end),
     receive
-	{Spawned, Return} when is_function (Return) ->
+	{Spawned, Return} ->
 	    Return()
     end.
 	      
@@ -79,21 +80,21 @@ serve_worker (Worker, Path, Client) ->
 worker_loop (Controller) ->
     receive
 	{Command, Path, Client} ->
-	    Fun = worker_fun (Command),
-	    Controller ! {self(), Path, [{Command, Fun (Path)}], Client},
+%%	    Fun = worker_fun (Command),
+	    Controller ! {self(), Path, [{Command, ?MODULE:Command (Path)}], Client},
 	    worker_loop (Controller);
 	stop ->
 	    bye
     end.
 
-worker_fun (type) ->
-    fun (Path) ->
-	    {ok, File_info} = file:read_file_info (Path),
-	    File_info#file_info.type
-    end;
+type (Path) ->
+    {ok, File_info} = file:read_file_info (Path),
+    File_info#file_info.type.
 
-worker_fun (directory_content) ->
-    fun (Path) ->
-	    {ok, Filename_list} = file:list_dir (Path),
-	    Filename_list
-    end.
+directory_content (Path) ->
+    {ok, Filename_list} = file:list_dir (Path),
+    Filename_list.
+
+modification_time (Path) ->
+    {ok, File_info} = file:read_file_info (Path),
+    File_info#file_info.mtime.

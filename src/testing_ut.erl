@@ -50,7 +50,7 @@ successful_test_() ->
     ok = ok.
 
 unsuccessful_test_() ->
-    ok = nok.
+    exit (suicide).
 
 successful_test_withfunnysuffix() ->
     successful_test_().

@@ -32,7 +32,7 @@
 -export([make_tree/2, delete_tree/1, use_tree/3, use_tree/4]).
 -export([first/2, unique/1]).
 -export([strip_whitespace/1, begins_with/2, begins_with/1, ends_with/2, ends_with/1]).
--export([fold_files/4, fold_files_without_recursion/4]).
+-export([fold_files/4, fold_files/5, fold_files_without_recursion/4]).
 -export([accumulate_if/3, accumulate_unless/3, is_below_directory/2]).
 -export([update_options/2]).
 -export([normalise_path/1]).
@@ -108,7 +108,7 @@ populate(_,[]) ->
 normalise([H|[]]) ->
     H;
 normalise([H|T]) when list(H) ->
-						% Inserts newlines when list of strings...
+    %% Inserts newlines when list of strings...
     normalise([string:concat(H,string:concat("\n",hd(T)))|tl(T)]);
 normalise([String]) when list(String) ->
     String;
@@ -229,7 +229,9 @@ list_dir_and_call_ff_6_with (Root, Action, Options, Acc, Filesystem, Fun) ->
 	      Acc,
 	      Content);
 	Other ->
-	    for_the_moment = Other
+	    exit ({unhandled_message, Other})
+    after 2000 ->
+	    exit (timeout)
     end.
 
 fold_files ([directory], Root, Item, Options, Action, Acc, Filesystem) ->
@@ -239,19 +241,37 @@ fold_files ([directory], Root, Item, Options, Action, Acc, Filesystem) ->
       Options,
       Action (xray (Root, Item, Options, [], Filesystem), Acc),
       Filesystem);
-fold_files (Error = {error, _}, _, _, _, Action, Acc, Filesystem) ->
+fold_files (Error = {error, _}, _, _, _, Action, Acc, _) ->
     Action (Error, Acc);
+fold_files (error, _, _, _, _, Acc, _) ->
+    Acc;
 fold_files (_Type,Root,Item,Options,Action,Acc, Filesystem) ->
     Action (xray (Root, Item, Options, [], Filesystem), Acc).
 
-xray(Root,Item,[type|T],Acc, Filesystem) ->
-%%     Result = file:read_file_info (filename:join (Root, Item)),
-%%     continue_if_ok ( Result, Root, Item, T, Acc, Filesystem);
+xray (Root, Item, [type | T], Acc, Filesystem) ->
     Filename = filename:join (Root, Item),
     Filesystem ! {self(), Filename, [type]},
     receive
 	{Filesystem, Filename, [{type, Type}]} ->
 	    xray (Root, Item, T, [Type | Acc], Filesystem);
+	_ ->
+	    error
+    after
+	 2000 ->
+	    error
+    end;
+xray(Root,Item,[relative_full_name|T],Acc, Filesystem) ->
+    xray (Root, Item, T, [Item | Acc], Filesystem);
+xray(Root,Item,[absolute_full_name|T],Acc, Filesystem) ->
+    xray (Root, Item, T, [filename:join (Root, Item) | Acc], Filesystem);
+xray(Root,Item,[extension|T],Acc, Filesystem) ->
+    xray (Root, Item, T, [filename:extension (Item) | Acc], Filesystem);
+xray (Root, Item, [modification_time | T], Acc, Filesystem) ->
+    Filename = filename:join (Root, Item),
+    Filesystem ! {self(), Filename, [modification_time]},
+    receive
+	{Filesystem, Filename, [{modification_time, Time}]} ->
+	    xray (Root, Item, T, [Time | Acc], Filesystem);
 	{Filesystem, Filename, {error, Error}} ->
 	    {error, Error};
 	Other ->
@@ -260,22 +280,8 @@ xray(Root,Item,[type|T],Acc, Filesystem) ->
 	 2000 ->
 	    timeout
     end;
-xray(Root,Item,[relative_full_name|T],Acc, Filesystem) ->
-    xray (Root, Item, T, [Item | Acc], Filesystem);
-xray(Root,Item,[absolute_full_name|T],Acc, Filesystem) ->
-    xray (Root, Item, T, [filename:join (Root, Item) | Acc], Filesystem);
-xray(Root,Item,[extension|T],Acc, Filesystem) ->
-    xray (Root, Item, T, [filename:extension (Item) | Acc], Filesystem);
-xray(Root,Item,[modification_time|T],Acc, Filesystem) ->
-    {ok, File_info} = file:read_file_info (filename:join (Root, Item)),
-    xray (Root, Item, T, [File_info#file_info.mtime | Acc], Filesystem);
 xray(_, _, [], Acc, _) ->
     lists:reverse(Acc).
-
-continue_if_ok ( {ok, File_info}, Root, Item, T, Acc, Filesystem) ->
-    xray (Root, Item, T, [File_info#file_info.type | Acc], Filesystem);
-continue_if_ok ( Error = {error, _}, _, _, _, _, _) ->
-    Error.
 
 is_below_directory (Path1, Path2) ->
     is_below_directory2 (lists:reverse (filename:split (Path1)), lists:reverse (filename:split(Path2))).
