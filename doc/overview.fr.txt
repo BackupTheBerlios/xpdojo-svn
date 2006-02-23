@@ -1,7 +1,26 @@
 Présentation générale d'XP Dojo
 ===============================
 
-La pratique de l'eXtreme Programming amène des façons nouvelles de programmer, de collaborer et de communiquer. Les outils de développement existants répondent assez peu à ces besoins, tout en compliquant les choses avec de nombreuses fonctionnalités qui, dans le contexte de l'eXtreme Programming, sont superflues ou inadaptées.
+XP Dojo est un logiciel offrant un espace virtuel dans lequel tous les participants d'un projet XP se rende pour travailler et collaborer. Il réunit le code, les tests, les scénarios et toute autre information concernant le projet, en permettant aux participants d'y travailler selon la méthode XP.
+
+Motivations
+-----------
+
+La pratique de l'eXtreme Programming amène des façons nouvelles de programmer, de collaborer et de communiquer.
+
+Par exemple, dans un projet XP, le code n'est ni commenté ni accompagné d'une documentation expliquant son organisation. Pourtant, chaque programmeur intervient dans toutes les parties du code, et du code qu'il développe peut avoir été modifié par d'autres la prochaine fois qu'il le regarde. Dans ces conditions, des outils de visualisation et navigation du code très efficaces sont indispensables.
+
+D'ailleurs, le programmeur XP ne navigue pas que dans le code : il navigue en parallèle dans les tests unitaires de ce code. Il passe systématiquement et fréquemment de l'un à l'autre ou les regarde côte à côte.
+
+Surtout, l'eXtreme Programming se reconnaît à deux caractéristiques: les tests unitaires sont écrits avant le code, et deux programmeurs travaillent en tandem. A elles seules ces deux pratiques bouleversent les flux et demanderaient une ergonomie particulière.
+
+Enfin, de par sa sensibilisation aux valeurs XP, un développeur XP aspire à des outils plus simples. Pourquoi, en dehors de Smalltalk, sommes-nous encore à travailler avec des fichiers ?
+
+Or les outils de développement existants répondent assez peu à ces besoins, tout en compliquant les choses avec de nombreuses fonctionnalités qui, dans le contexte de l'eXtreme Programming, sont superflues ou inadaptées.
+
+Il y certes des avancées. De plus en plus d'IDE (environnements de développement intégrés), à l'instar d'IntelliJ ou Eclipse, fournissent des refactorings automatisés et intègrent le lancement de tests JUnit. Ils intègrent également divers outils de gestion de configuration. CruiseControl automatise l'intégration continue. Les outils de tests pullulent, et notamment FIT permet d'impliquer un non-développeur dans la définition de tests de recette métier.
+
+
 
 L'objectif principal du projet XP Dojo est de fournir un outil simple et autonome spécifiquement adapté aux pratiques XP, notamment :
 
@@ -17,11 +36,9 @@ En outre, le projet explore des façons nouvelles de pratiquer XP nécessitant d
 
 Enfin, XP Dojo vise à faciliter l'adoption de l'eXtreme Programming en automatisant ou simplifiant la production d'informations plus traditionnelles (rapports, traçabilité, métriques...)
 
-
 Vue d'ensemble
 --------------
 
-XP Dojo est un logiciel permettant de créer un espace virtuel dans lequel tous les participants d'un projet XP se rende pour travailler et collaborer. Il réunit le code, les tests, les scénarios et toute autre information concernant le projet, en offrant aux participants les moyens d'y travailler selon la méthode XP.
 
 XP Dojo offre trois interfaces aux utilisateurs:
 
