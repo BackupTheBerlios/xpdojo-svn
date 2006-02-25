@@ -18,7 +18,10 @@ Enfin, de par sa sensibilisation aux valeurs XP, un développeur XP aspire à de
 
 Or les outils de développement existants répondent assez peu à ces besoins, tout en compliquant les choses avec de nombreuses fonctionnalités qui, dans le contexte de l'eXtreme Programming, sont superflues ou inadaptées.
 
-Il y certes des avancées. De plus en plus d'IDE (environnements de développement intégrés), à l'instar d'IntelliJ ou Eclipse, fournissent des refactorings automatisés et intègrent le lancement de tests JUnit. Ils intègrent également divers outils de gestion de configuration. CruiseControl automatise l'intégration continue. Les outils de tests pullulent, et notamment FIT permet d'impliquer un non-développeur dans la définition de tests de recette métier.
+Il y certes des avancées. De plus en plus d'IDE (environnements de développement intégrés), à l'instar d'IntelliJ ou Eclipse, fournissent des remaniements (<i>refactorings<i/>) automatisés et intègrent le lancement de tests JUnit. Ils intègrent également divers outils de gestion de configuration. CruiseControl automatise l'intégration continue. Des outils de tests de recette permettant de définir les résultats attendus avant d'avoir développé le logiciel apparaissent, et FIT notamment permet même d'impliquer un non-développeur dans leur définition.
+
+Mais le tableau est loin d'être idyllique. D'abord, la plupart des avancées citées sont réservées au développement en Java. Dans Eclipse, la plupart des remaniements ne fonctionnent pas ou pas toujours comme l'attendent des développeurs XP habitués à cette pratique - après quelque semaines de frustration nous avons fini par ne plus en utiliser qu'un seul, le renommage. L'intégration de JUnit n'a pas été étudiée pour le TDD: l'assistant de création de TestCase propose de sélectionner la classe à tester parmi les classes déjà existantes, et même de générer des squelettes de tests en utilisant ses méthodes existantes !
+
 
 
 
