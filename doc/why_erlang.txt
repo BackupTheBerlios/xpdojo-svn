@@ -19,20 +19,17 @@ Attention:
 
 Les langages fonctionnels utilisent les fonctions plutôt que les
 objets ou procédures comme briques de base pour la construction de
-programmes.
+programmes. Il faut prendre le terme "fonction" dans le
+mathématique du terme. Une fonction établie une
+relation entre 2 ou plusieurs entités.
+La programmation fonctionnelle ne concerne pas les
+mathématiques mais tente de fournir des moyens de
+réduire la complexité et d'offir un nouveau niveau
+d'abstraction.
+Les langages fonctionnels qui supporte ce gente de
+programmation fournissent au moins un sous ensemble des
+fonctionnalités suivante:
 
-FunctionalProgramming is when functions, not objects or procedures,
-are the fundamental building blocks of a program. Functions in this
-sense, not to be confused with CeeLanguage functions which are just
-procedures, are analogous to mathematical equations: they declare a
-relationship between two or more entities.
-
-FunctionalProgramming, however, is not about mathematics but about
-abstraction and reducing complexity: as such, it provides a powerful
-paradigm in which to tackle complex, real-world programming tasks.
-
-FunctionalProgrammingLanguages, which support this style of
-programming, provide at least some of the following features:
 
 - fonde sur l'evaluation d'expressions
 - il n'y a que des valeurs, on ne gere pas la memoire
@@ -52,42 +49,52 @@ défauts de programmation et favoriser des programmes:
 - courts et concis
 - expressifs
 
-An important part of (pure) FunctionalProgramming philosophy is
-ReferentialTransparency, which requires writing SideEffectFree?
-functions. In order to encourage this, variables are SingleAssignment,
-or immutable: once they are initialized, their value cannot be
-changed. Arguments to functions may only be passed by value, and
-rather than modify arguments, functions must return new variables.
 
-This alone has several implications on the style of programming
-(compiler implementation and performance aspects are discussed later):
+Une part importante de la philosophie de la
+programmation fonctionnelle repose sur
+ReferentialTransparency, qui nécessite d'écrire des
+fonctions sans effet de bords. Pour faciliter cela, les
+variables ne sont assignables qu'une fois ou
+invariante: une fois initialisées, leur valeur ne peut
+pas être changée. Les arguments des fonctions sont
+passés par valeur, et au lieu de modifier un paramétre,
+les fonctions vont retourner des nouvelles variables.
+Le simple fait que les variables sont invariantes
+influt le style de programmation:
+- Comme les fonctions ne peuvent pas modifier les
+paramêtres, elles doivent pouvoir retourner 'plusieurs
+données': C'est pour cela que les tuples et les listes
+sont largement employés dans les langages fonctionnels.
+- Comme les variables sont invariante, l'écriture de
+boucle à l'aide de compteur est impossible: La
+programmation récursive est très largement majoritaire.
+- Comme les fonctions ne peuvent pas modifier les
+variables, elles ne peuvent pas 'stocker' d'état entre
+plusieurs appels succéssifs. Il y a donc, contrairement
+à la programmation orienté objet, une totale séparation
+entre les données et les traitements.
 
-- Since functions cannot modify arguments, they need to be able to
-  return more than one piece of information: therefore tuples and
-  lists are widely used, and may be created on the fly in most
-  FunctionalProgrammingLanguages.
-- Since variables, even within functions, are immutable, writing loops
-  using counters is impossible or at best unwieldy: the dominant style
-  of algorithm is therefore recursive.
-- Since functions cannot modify variables, they cannot store state
-  between successive calls. Thus data and functions are kept
-  completely separate, which is the opposite philosophy to
-  ObjectOriented encapsulation.
-- There may be a need for a data structure to represent the global
-  state and top-level functions that operate on the global state. Most
-  other functions only operate on a small part of the data, so the
-  top-level functions extract pieces of the global state, pass them to
-  lower-level functions, and construct a new global state using the
-  results. (Incidentally, this makes it trivial to instantiate
-  multiple copies of the entire application. For example, maintain a
-  copy of the entire program state as it existed five minutes ago, and
-  revert to it if there is an error.)
-- The emphasis is on writing pure, generic functions which could work
-  in any environment, and choosing actual program behaviour at the top
-  of the call hierarchy. This is in contrast to ObjectOriented
-  programming which encourages pushing behaviour into class methods
-  and making decisions low down by overriding them in
-  subclasses. (Document example moved to FunctionalModeling).
+- Le besoin d'avoir une structure de données globale
+  pour représenter l'état global de l'application peut
+  exister. Dans ce cas, seul une fonction de haut
+  niveau va manipuler cette structure et extraire une
+  partie de la structure pour l'injecter dans des
+  fonctions plus sépcifique. Le résultat des fonctions
+  spécifiques sera à son tour injecté dans l'état
+  global de l'application. (L'état de l'application
+  étant dans une seule structure, il est facile d'en
+  instancier plusieurs instances. Ainsi, on peut
+  maintenir une copie de l'état de l'application tel
+  qu'il était avant le début d'un traitement et faire
+  "un rollback" en cas d'échec.
+- La programmation fonctionnelle nous améne à écrire
+  des fonctions 'pure', générriques, qui peuvent
+  fonctionner dans tous les environnements. Le
+  comportement global de l'application sera défini en
+  haut de la pile des appels. Ceci contraste avec la
+  programmation objet qui encourage à mettre le
+  comportement dans des méthodes de classes et à le
+  surcharger afin de faire des choix.
 
 *  Survol du langage Erlang
 
@@ -133,6 +140,39 @@ as one. In particular, Erlang data types are not objects.
 </SIMPLIFIER>
 
 ** Robustesse et exactitude
+
+Ce qu'on demande tous à un programme informatique c'est
+qu'il soit prédictible et qu'il offre à son utilisateur
+une durée de vie entre 2 plantages suffissement
+important pour ne pas le dégouter.
+*** Pourquoi les programmes ont des comportements bizares,
+certains les appeleront des "features cachées" ?
+La principale raison est le manque de tests unitaires
+et de recette. Sans tests, les effets de bords des
+évolutions sont mal maitrisés, les comportements réels
+du code ont du mal à être perçus et donc l'application
+'marche' par elle même. Cependant, les tests ne sont
+pas suffisant pour garantir le fonctionnement de
+l'application. Disons plutôt que pour garantir le
+fonctionnement d'une application dans TOUS les cas de
+figures il faudrait mettre en oeuvre une campagne de
+tests énorme mettant en action l'ensemble du code avec
+un ensemble de données d'entrée exhaustif (ou proche de
+l'exhaustivité). L'expression du code 'sous forme
+mathématique' petmet de définir aisément l'ensemble des
+valeurs d'entrée d'une fonction, Erlang faisant le
+reste en remontant des erreurs si une fonction est
+appelée avec des valeurs hors plage. Voila pour la
+robustesse. L'exactitude des programmes, leur
+prédictibilité, est favorisé par dans les langages
+fonctionels grâce à la non propagation des effets de
+bords et de l'indépendance des fonctions les unes par
+rapport aux autres. Les fonctions, par nature ne font
+que retourner un résultat. Et ce résultat est, de
+surcroit, compris dans un intervalle connu et bien
+défini. Il est donc beaucoup plus aisé d'écrire des
+jeux de tests complets décrivant explicitement
+l'ensemble des cas d'utilisation de l'application.
 
 ** Testabilité
 
