@@ -128,3 +128,50 @@ serve_a_crashing_client_test () ->
 
 %%% multiple_requests_test () ->
 %%%     ok = not_coded.
+fake_file_system (Instructions) ->
+    receive
+	{Client, Path, [Command]} ->
+	    Client ! {self(), Path, [{Command, dict:fetch ({Path, Command}, Instructions)}]},
+	    fake_file_system (Instructions);
+	stop ->
+	    bye
+    end.
+
+list_recursively_test () ->
+    lists:foreach (
+      fun ({Root, Fake_instructions, Expected_result}) ->
+	      F = spawn (?MODULE, fake_file_system, [dict:from_list (Fake_instructions)]),
+	      Result = filesystem:list_recursively (F, Root),
+	      F ! stop,
+	      same_elements = adlib:compare (Expected_result, Result)
+      end,
+      [{"/tmp",  [{{"/tmp", directory_content}, []}], []},
+       {"/home",
+	[{{"/home", directory_content}, ["a", "b"]},
+	 {{"/home/a", type}, regular},
+	 {{"/home/b", type}, regular}],
+	["/home/a", "/home/b"]} ,
+       {"/root/dir",
+	[{{"/root/dir", directory_content}, ["file", "sub", "file2", "sub2"]},
+	 {{"/root/dir/file", type}, regular},
+	 {{"/root/dir/file2", type}, regular},
+ 	 {{"/root/dir/sub/file3", type}, regular},
+ 	 {{"/root/dir/sub2/file4", type}, regular},
+ 	 {{"/root/dir/sub2/sub3/file5", type}, regular},
+	 {{"/root/dir/sub", type}, directory},
+ 	 {{"/root/dir/sub2", type}, directory},
+ 	 {{"/root/dir/sub2/sub3", type}, directory},
+	 {{"/root/dir/sub", directory_content}, ["file3"]},
+	 {{"/root/dir/sub2", directory_content}, ["sub3", "file4"]},
+	 {{"/root/dir/sub2/sub3", directory_content}, ["file5"]}],
+	["/root/dir/file",
+	 "/root/dir/file2",
+	 "/root/dir/sub/file3",
+	 "/root/dir/sub2/file4",
+	 "/root/dir/sub2/sub3/file5",
+	 "/root/dir/sub",
+	 "/root/dir/sub2",
+	 "/root/dir/sub2/sub3"]}]).
+
+list_recursively_with_additional_info_test () ->
+    ok.

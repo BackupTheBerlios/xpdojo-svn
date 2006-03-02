@@ -77,6 +77,21 @@ receive_one_from_test() ->
     hello = testing:receive_one_from(Pid1),
     timeout = testing:receive_one_from(self()).
 
-    
-				     
-			    
+fake_file_system_test () ->    
+    Tree = [{"/tmp", directory, {{2006,3,2},{12,56,00}},
+	     [{"foo", regular, {{2006,3,18},{14,00,00}}},
+	      {"bar", regular, {{2005,3,18},{9,00,03}}}]},
+	    {"/home/dodo/.emacs", regular, {{2006,1,15},{20,44,00}}}],
+    F = testing:file_system (Tree),
+    F ! {self(), "/tmp", [directory_content]},		   
+    F ! {self(), "/tmp/foo", [type]},			   
+    F ! {self(), "/tmp/bar", [modification_time]},	   
+    F ! {self(), "/home/dodo/.emacs", [directory_content]},
+    Messages = testing:receive_all(),
+    same_elements =
+	adlib:compare (
+	  [{F, "/tmp", [{directory_content, ["foo", "bar"]}]},
+	   {F, "/tmp/foo", [{type, regular}]},	   
+	   {F, "/tmp/bar", [{modification_time, {{2005,3,18},{9,00,03}}}]},	   
+	   {F, "/home/dodo/.emacs", [{directory_content, {error, enotdir}}]}],
+	  Messages).

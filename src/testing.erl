@@ -27,8 +27,8 @@
 %%% IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 %%% POSSIBILITY OF SUCH DAMAGE.
 
--module(testing).
--export([run_functions/1, run_modules/2, use_and_purge_tree/2, wait_for_detectable_modification_time/0, receive_one_from/1, receive_one/0, purge_messages/1, purge_messages/0]).
+-module (testing).
+-compile (export_all).
 
 run_functions(Functions) when list(Functions) ->
     lists:foldl(
@@ -96,3 +96,43 @@ receive_one () ->
 	    timeout
     end.
 		
+receive_all () ->
+    receive_all ([]).
+
+receive_all (Acc) ->
+    receive
+	Message ->
+	    receive_all ([Message | Acc])
+    after 1000 ->
+	    Acc
+    end.
+
+file_system (Tree) ->
+    spawn (?MODULE, fake_file_system, [tree_to_file_system_instructions (Tree, [])]).
+
+fake_file_system (Instructions) ->
+    receive
+	{Client, Path, [Command]} ->
+	    Client ! {self(), Path, [{Command, dict:fetch ({Path, Command}, Instructions)}]},
+	    fake_file_system (Instructions);
+	stop ->
+	    bye
+    end.
+
+tree_to_file_system_instructions ([{Path, directory, Time, Files} | Tail], Instructions) ->
+    Remaining = [setelement (1, X, filename:join (Path, element (1, X))) || X <- Files] ++ Tail,
+    New_instructions =
+	[{{Path, type}, directory},
+	 {{Path, directory_content}, [element (1, X) || X <- Files]},
+	 {{Path, modification_time}, Time}]
+	++ Instructions,
+    tree_to_file_system_instructions (Remaining, New_instructions);
+tree_to_file_system_instructions ([{Path, regular, Time} | Tail], Instructions) ->
+    New_instructions =
+	[{{Path, type}, regular},
+	 {{Path, directory_content}, {error, enotdir}},
+	 {{Path, modification_time}, Time}]
+	++ Instructions,
+    tree_to_file_system_instructions (Tail, New_instructions);
+tree_to_file_system_instructions ([], Instructions) ->
+    dict:from_list (Instructions).

@@ -29,6 +29,7 @@
 -module (filesystem).
 -export ([start/0, worker_loop/1, serve/1]).
 -export ([directory_content/1, type/1, modification_time/1]).
+-export ([list_recursively/2]).
 -include_lib ("kernel/include/file.hrl").
 
 serve (Fun) ->
@@ -98,3 +99,31 @@ directory_content (Path) ->
 modification_time (Path) ->
     {ok, File_info} = file:read_file_info (Path),
     File_info#file_info.mtime.
+
+list_recursively (File_system, Root) ->
+    File_system ! {self(), Root, [directory_content]},
+    list_recursively_loop ([], 1).
+
+list_recursively_loop (Acc, 0) ->
+    Acc;
+list_recursively_loop (Acc, Pending) ->
+    receive
+	{File_system, Path, [{directory_content, Content}]} ->
+	    Message_count = lists:foldl (
+	      fun (Entry, Count) -> 
+		      File_system ! {self(), filename:join (Path, Entry), [type]},
+		      Count + 1
+	      end,
+	      0,
+	      Content),
+	    list_recursively_loop (Acc, Pending -1 + Message_count);
+	{_, Path, [{type, regular}]} ->
+	    list_recursively_loop ([Path | Acc], Pending - 1);
+	{File_system, Path, [{type, directory}]} ->
+	    File_system ! {self(), Path, [directory_content]},
+	    list_recursively_loop ([Path | Acc], Pending);
+	Other ->
+	    {unexpected_message, Other, Acc}
+    after 2000 ->
+	    {timeout, Acc}
+    end.

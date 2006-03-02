@@ -316,7 +316,7 @@ path_filter ([],Acc) ->
 normalise_path(Path) ->
     filename:join(path_filter(filename:split(Path),[])).
 
-compare (List1, List2) ->
+compare (List1, List2) when is_list (List1), is_list (List2) ->
     compare_aux (List1, List2, []).
 
 compare_aux ([], [], []) ->
