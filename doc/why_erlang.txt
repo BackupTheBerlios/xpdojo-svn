@@ -107,37 +107,15 @@ Erlang est un langage développé et supporte par Ericsson:
 - programmation concurrente (parallèle) a base de processus
   séquentiels communicants (??? terme français???)
 
-Erlang is compiled to bytecode which runs in a VirtualMachine. It
-comes complete with development tools (compiler, debugger, profiler),
-libraries and applications including the MnesiaDatabase, an HTTP
-server and a CORBA ORB.
+Erlang est compilé en bytecode qui tourne sur une machine virtuelle. Erlang vient avec un 'environnement de dév' complet (compilateur, debugger, profiler), des librairies et diverses applications incluant Mnesia (base de données répartie, un serveur HTTP, un ORB CORBA).
 
-Erlang is developed and supported by the Ericsson ComputerScience lab,
-who has distributed it freely under an OpenSource license since 1998.
+Erlang est développé et supporté par Ericsson ComputerScience lab et est distribué gratuitement sous une licence OpenSource depuis 1998.
 
-<SIMPLIFIER>
-On the other hand, Erlang offers ''processes'', which are like threads
-except that they are completely isolated from each other and may only
-communicate by sending and receiving asynchronous messages. These
-Erlang processes are ideal to represent physical models, and in many
-ways satisfy the NygaardClassification better than most traditional
-ObjectOriented languages. These concurrent processes are polymorphic,
-in that any process which responds to a set of messages (an alphabet,
-in CSP parlance), may be transparently substituted for
-another. Processes also have an identity (a unique, unforgeable
-process id). Code, in the form of functions, may easily be reused by
-different processes.
+Le langage Erlang inclue 'nativement' la notion de 'process'. Les 'process' s'apparentent aux threads dans la mesure où ils permettent dans réaliser des traitements en parrellele. Les 'process' erlang, grâce aux propriétés des langages fonctionnels, sont totalement isolé les uns des autres et peuvent uniquement communiquer entre eux que par l'intermédiaire de messages asynchrones. Un process répondant uniquement aux 'excitations' d'un ensemble de messages, ils sont polymorphiques et peuvent être substitués par un nouveau de manière totalement transparent. L'unité de code étant la fonction, different process peuvent partager  très facilement différent 'set' de fonctions.
 
-Erlang also offers ''behaviors'', which are similar to Java
-interfaces: a module conforms to a behavior if it offers a set of
-functions.
+Erlang offre également des extensions offrant des facilités de programmation et de conception d'application client/serveur. L'une de ces extensions se nomment 'behavior'. Ils sont similaires aux interfaces Java, un module erlang ayant tel 'behavior' va exposer un set de fonction.
+Erlang peut modéliser le code comme des objets. Les développeur Erlang vont créer des process pour les objects qui ont un behavior (et/ou état), alors que les langage objet, vont tout modéliser avec des objets.
 
-So Erlang in fact offers considerable support for modeling the code
-as objects. However, Erlang developers tend to model as processes only
-objects that have behavior (and possibly state), unlike
-SmalltalkLanguage or JavaLanguage developers who must model everything
-as one. In particular, Erlang data types are not objects.
-</SIMPLIFIER>
 
 ** Robustesse et exactitude
 
