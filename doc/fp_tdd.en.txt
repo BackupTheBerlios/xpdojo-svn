@@ -1,0 +1,250 @@
+* Functional programming simplifies test-driven development
+
+Extreme Programming includes a fundamental programming technique
+called Test Driven Development. The idea is to let the program and the
+design emerge from a series of cycles:
+
+- write an assertion about what the code should do;
+- make the code pass the assertion;
+- refactor the code (simplify it, make it expressive and remove
+- duplication, all without breaking the tests).
+
+The first step, writing an assertion about the code, comes in various
+levels of complexity.
+
+** Canonical programmer tests
+
+The most straightforward assertions look like:
+
+  assertEquals ("hello", substring (5, "hello world"));
+
+The simplicity comes from the fact that the function under test is
+free-standing (it does not require an object to be instanciated), its
+arguments are of primitive types (which may be provided as literals),
+and it has no side-effects (it returns a value which depends only on
+its arguments, and does nothing else).
+
+When assertions can be that straightforward, it only takes a few more
+lines of test code to completely define the behaviour of the function:
+
+  assertEquals ("orld", substring (-4, "hello world"));
+  assertEquals ("", substring (0, "hello world"));
+  assertEquals ("", substring (5, ""));
+  assertEquals ("", substring (5, NULL));
+
+The conciseness and the ability to see side by side all the different
+cases contribute to turning these tests into documentation of the
+tested function. Such a test can also easily be re-expressed in a
+data-driven fashion.
+
+** The problem with objects
+
+Several characteristics of object-oriented languages contribute to
+making most test assertions more complex than this.
+
+*** Object initialisation
+
+If the function being tested is not free-standing, its target object
+needs to be instanciated and initialised. The same is true of any
+arguments that are not primitive types.
+
+In the best of cases, a default initialisation is appropriate, or the
+object provides convenient initialisation functions from one or more
+appropriate primitive types. Often, however, putting the object under
+test or an argument into the desired state may require initialising a
+separate object, or calling several methods on the object.
+
+*** Complex or multiple return types
+
+When a function produces several results, procedural
+programming requires the use of "out" arguments
+(arguments that will be modified by the
+function). These results cannot be tested in a single
+expression: the assertions must be made after the call.
+
+Object-oriented programming offers the additional possibility of
+returning an object, i.e. a complex type which may hold more than one
+piece of information. In some cases, when the returned object offers a
+method which tells us what we want to know, testing it is
+straightforward. Often, however, it is necessary to make several
+assertions on it to be certain of its state.
+
+*** State must be queried
+
+A fundamental principle of object-oriented design is
+encapsulation and data hiding. In the context of
+testing, the consequence of this is that the effects of
+a given function call are rarely all visible in the
+return value. Separate methods (queries, or "getters" as
+they are called in Java) must be called to inspect the
+state of an object after the function under test has
+been called. Thus test expressions can no longer be
+purely declarative (in/out).
+
+*** Effects propagate
+
+Object-oriented concepts are frequently used to model
+something, typically the application domain. This
+implies creating relationships (owns, uses...) between
+objects. As a result, the effects of calling a given
+function, may not even be localised in the target
+object! In that case, testing a single function will
+require more work setting up the secondary objects, and
+more work retrieving and querying them.
+
+A popular alternative involves providing mock objects
+to the object under test, and testing that it interacts
+as expected with these. This approach doesn't however
+reduce the total amount of work involved in setting
+things up before calling the function and/or
+investigating things after the call.
+
+*** Inheritance
+
+Finally, inheritance is another cornerstone of
+object-oriented design which adds complexity to
+tests. Inheritance defers all or part of the work done
+by a function into subclasses.
+
+When all the work is deferred, there is nothing to test
+in the base class. This is simple, but not particularly
+useful (i.e. there is a lack of tests).
+
+When part of the work is deferred, it is possible to
+test those parts that have not been deferred, but this
+requires creating a subclass just for the purposes of
+the test, which doesn't contribute to simple tests.
+
+** Introducing functional programming
+
+Functional languages offer a different programming paradigm from
+object orientation, which happens to be ideally suited to the writing
+of canonically simple programmer tests.
+
+Indeed, the "raison d'être" of functional programming is known as
+"referential transparency", i.e. that functions have no side effects:
+they are given immutable arguments and return immutable results. The
+motivation for this was to make it simpler to /reason/ about programs,
+and to make it possible to prove their correctness. It turns out that
+this property, along with a few other nice features that come with
+functional languages, makes it very simple to write simple, expressive
+programmer tests.
+
+*** Dynamic data structures
+
+Functional programming promotes the exact opposite of object oriented
+encapsulation: data are kept separate from the functions that handle
+them. Data structures are visible, get passed into functions, and new
+ones come out.
+
+In order to promote program correctness, data is also immutable: a
+function cannot modify the data it receives, it can only produce new
+data. Many functional languages go even further by making it
+impossible to modify the value assigned to variables within a given
+function (this is often referred to as single-assignment).
+
+To make all this practicable, it needs to be easy to create complex
+data structures on the fly as easily as it is to write a litteral
+number or other primitive type. Functional languages usually have
+built-in lists and tuples, from which arbitrarily complex data
+structures can be built.
+
+This happens to be exactly what is needed, when expressing unit tests,
+to solve two of the problems identified with objects: initialization
+and complex/multiple return types.
+
+In the case of initialization, arbitrarily complex data structures
+can be expressed as literals:
+
+ ...
+
+As for complex or multiple return types, in functional languages
+these are always handled by returning a tuple or list of
+results, because arguments are immutable. And the return value(s) can
+simply be compared to a literal with the expeced tuple of list:
+
+...
+
+Of course this would become unwieldy with very complex data
+structures if it were not for pattern matching.
+
+*** Pattern matching
+
+Pattern matching in single-assignment functional languages (WHICH???) is a
+powerful mecanism that combines assignment, assertion, packing and
+unpacking of data structures. Examples will provide the clearest
+explanation.
+
+First, an ordinary-looking expression:
+
+Author = "Knuth"
+
+An attempt is made to match the right-hand side with the left-hand
+side. Assuming the variable Author has not been bound before, the match
+succeeds, which means that the variable Author is bound to
+"Knuth". This is like an assignment.
+
+Now, written the other way round:
+
+"Knuth" = Author
+
+This time, an attempt is made to match the value of Author to a
+constant expression: the match succeeds (because Author happens to be
+bound to the same value). This is like an assertion.
+
+The following assertion-like match fails (throws a runtime exception):
+
+"Dijkstra" = Author
+
+Indeed, Author is bound to the value "Knuth", which doesn't match the
+constant expression on the left-hand side.
+
+Now if we write:
+
+Author = "Dijkstra"
+
+This match also fails, because Author has already been bound so its
+value can no longer be changed (single assignment).
+
+Now let's introduce data structures:
+
+Book = {123, Author, "The Art of Programming"}
+
+The variable Book is unbound, so the match succeeds. Here, in
+addition to an assignment, we have packed a tuple into a single
+variable.
+
+Now, we can do a simple assertion:
+
+{123, "Knuth", "The Art of Programming"} = Book
+
+Or, we can do some unpacking:
+
+{Id, Author2, Title} = Book.
+
+This expression is actually doing three things:
+
+1) Asserting that Book is bound to a 3-tuple
+2) Unpacking the 3-tuple
+3) Binding its elements to new variables.
+
+We could have done more asserting and less binding:
+
+{123, "Knuth", Title2} = Book
+
+This only binds the title, but asserts not only that book holds a
+3-tuple, but also the values of its first two elements.
+
+Finally, we could have done less binding /and/ less asserting, using
+the special "ignore" variable:
+
+{_, _, Title3} = Book.
+
+"_" is a special variable that matches anything and never gets bound.
+
+With pattern matching, the components of complex values returned by
+functions can be tested or bound for further use, all in a single
+expression.
+
+*** Lambda, the ultimate mock
+
