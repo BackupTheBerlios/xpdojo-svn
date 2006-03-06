@@ -167,6 +167,12 @@ Expliquer fonctionnement erlang
 Démontrer sa testabilité
 Exemple (philosophes? sudoku?)
 
+Les applications actuelles sont de manière courante maintenant multi-threadées. Les problèmes surviennent lorsque l'on veut tester ces applications. Le but recherché en utisant des threads est de lancer des traitements en parallèle. Ces traitements peuvent être, et le ceux généralement, interdépendant entre eux. Les threads sont gèrées par le système d'exploitation, leur lancement et leur sequencement ne sont donc pas PRÉDICTIBLES. 99% du temps tout se passera bien, mais en fonction de la charge machine ou d'un autre évenement externe, un 'nouvel' sequement de thread va réveler un bug, soit du à un accès concurrent à une variable, soit du à un interblocage. 
+Il est très dur de tester le comportement d'un application multi-thread. On peut facilement tester le comportement d'UN thread, et encore au prix d'une mise au point importante (lancement du thread, attente de X secondes ... ), mais lorsque l'application comporte un grand nombre de thread, l'ensemble ne sera jamais testé dans TOUS les cas de figures.
+Hormis les faiblesses de testabilité, le multi-thread, mal maitrisé, peut également s'averer un mauvais pari conceptuel. Les threads doivent accéder à des données et donc à des objets. Si on ne prend pas garde, le traitement associé à un thread peut devoir accéder à plusieurs objets (ou plus exactement, aux données) et l'encapsulation risque de sauter en morceau.
+Les threads étant généralement "rajoutées" à la modélisation objet, leur utlisation vient 'refermer' le code.
+
+
 ** Plasticité
 
 La transparence référentielle facilite le remaniement
