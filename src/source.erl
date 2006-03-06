@@ -30,15 +30,8 @@
 -export ([erlang_files/1, module/2, module_file/2, lines/1]).
 
 erlang_files (Directory) ->
-    adlib:fold_files (
-      Directory,
-      fun ([regular,".erl",Name],Acc) ->
-	      [Name|Acc];
-	  (_,Acc) ->
-	      Acc
-      end,
-      [type, extension, absolute_full_name],
-      []).
+    All = filesystem:serve (fun (F) -> filesystem:list_recursively (F, Directory, [type]) end),
+    [Name || {Name, Type} <- All, Type == regular, filename:extension (Name) == ".erl"].
 
 module (Module, [{Function, Lines}]) ->
     lines (

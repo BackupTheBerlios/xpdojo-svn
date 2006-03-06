@@ -38,16 +38,13 @@ loop (Name, Notify, Tree) ->
 	{error, enoent} ->
 	    Notify (nonexistent, Name);
 	{ok, _} ->
-	    NewTree =
-		adlib:fold_files (
-		  Name,
-		  fun ([regular, File_name, Modification_time], Acc) ->
-			  [{File_name, Modification_time} | Acc];
-		      (_, Acc) ->
-			  Acc
-		  end,
-		  [type, absolute_full_name, modification_time],
-		  []),
+	    List =
+		filesystem:serve (
+		  fun(F) ->
+			  filesystem:list_recursively (F, Name, [type, modification_time])
+		  end),
+	    NewTree = 
+		[{Item, Time} || {Item, Type, Time} <- List, Type == regular],
 	    report (directory_tree:changes (Tree, NewTree), Notify),
 	    receive
 		stop ->

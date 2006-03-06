@@ -29,7 +29,7 @@
 -module (filesystem).
 -export ([start/0, worker_loop/1, serve/1]).
 -export ([directory_content/1, type/1, modification_time/1]).
--export ([list_recursively/2]).
+-export ([list_recursively/2, list_recursively/3]).
 -include_lib ("kernel/include/file.hrl").
 
 serve (Fun) ->
@@ -61,8 +61,8 @@ new_worker (Server) ->
 
 serve_client (Worker) ->
     receive
-	{Client, Path, [Command]} ->
-	    Worker ! {Command, Path, Client},
+	{Client, Path, Commands} ->
+	    Worker ! {Commands, Path, Client},
 	    serve_worker (Worker, Path, Client);
 	stop ->
 	    Worker ! stop
@@ -80,9 +80,9 @@ serve_worker (Worker, Path, Client) ->
     
 worker_loop (Controller) ->
     receive
-	{Command, Path, Client} ->
-%%	    Fun = worker_fun (Command),
-	    Controller ! {self(), Path, [{Command, ?MODULE:Command (Path)}], Client},
+	{Commands, Path, Client} ->
+	    Result = [{Command, ?MODULE:Command (Path)} || Command <- Commands],
+	    Controller ! {self(), Path, Result, Client},
 	    worker_loop (Controller);
 	stop ->
 	    bye
@@ -100,30 +100,40 @@ modification_time (Path) ->
     {ok, File_info} = file:read_file_info (Path),
     File_info#file_info.mtime.
 
-list_recursively (File_system, Root) ->
-    File_system ! {self(), Root, [directory_content]},
-    list_recursively_loop ([], 1).
+list_recursively (F, R) ->
+    list_recursively (F, R, []).
 
-list_recursively_loop (Acc, 0) ->
+list_recursively (File_system, Root, Options) ->
+    File_system ! {self(), Root, [directory_content]},
+    list_recursively_loop ([], 1, Options).
+
+list_recursively_loop (Acc, 0, _) ->
     Acc;
-list_recursively_loop (Acc, Pending) ->
+list_recursively_loop (Acc, Pending, Options) ->
     receive
 	{File_system, Path, [{directory_content, Content}]} ->
 	    Message_count = lists:foldl (
 	      fun (Entry, Count) -> 
-		      File_system ! {self(), filename:join (Path, Entry), [type]},
+		      File_system ! {self(), filename:join (Path, Entry), [type | Options]},
 		      Count + 1
 	      end,
 	      0,
 	      Content),
-	    list_recursively_loop (Acc, Pending -1 + Message_count);
-	{_, Path, [{type, regular}]} ->
-	    list_recursively_loop ([Path | Acc], Pending - 1);
-	{File_system, Path, [{type, directory}]} ->
+	    list_recursively_loop (Acc, Pending -1 + Message_count, Options);
+	{_, Path, [{type, regular} | Option_results]} ->
+	    list_recursively_loop ([pack (Path, Option_results) | Acc], Pending - 1, Options);
+	{File_system, Path, [{type, directory} | Option_results]} ->
 	    File_system ! {self(), Path, [directory_content]},
-	    list_recursively_loop ([Path | Acc], Pending);
+	    list_recursively_loop ([pack (Path, Option_results) | Acc], Pending, Options);
+	{_, _, {error, _}} ->
+	    list_recursively_loop (Acc, Pending - 1, Options);
 	Other ->
 	    {unexpected_message, Other, Acc}
     after 2000 ->
 	    {timeout, Acc}
     end.
+
+pack (Path, []) ->
+    Path;
+pack (Path, Options) ->
+    list_to_tuple ([Path | [element (2, X) || X <- Options]]).

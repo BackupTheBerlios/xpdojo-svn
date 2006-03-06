@@ -108,13 +108,14 @@ receive_all (Acc) ->
     end.
 
 file_system (Tree) ->
-    spawn (?MODULE, fake_file_system, [tree_to_file_system_instructions (Tree, [])]).
+    spawn (?MODULE, file_system_loop, [tree_to_file_system_instructions (Tree, [])]).
 
-fake_file_system (Instructions) ->
+file_system_loop (Instructions) ->
     receive
-	{Client, Path, [Command]} ->
-	    Client ! {self(), Path, [{Command, dict:fetch ({Path, Command}, Instructions)}]},
-	    fake_file_system (Instructions);
+	{Client, Path, Commands} ->
+	    Result = [{Command, dict:fetch ({Path, Command}, Instructions)} || Command <- Commands],
+	    Client ! {self(), Path, Result},
+	    file_system_loop (Instructions);
 	stop ->
 	    bye
     end.

@@ -64,9 +64,11 @@ single_directory_test() ->
 	      ok = file:delete (File_name),
 	      {deleted, File_name} = receive_one_from(Pid),
 	      ok = file:del_dir (Directory),
-	      timeout = receive_one_from(Pid),
+	      {nonexistent, Directory} = receive_one_from (Pid),
+	      {4,timeout} = {4,receive_one_from(Pid)},
 	      file_monitor:stop(Pid),
-	      timer:sleep(1000)
+	      timer:sleep(1000),
+	      false = is_process_alive (Pid)
       end).
 
 complex_test() ->

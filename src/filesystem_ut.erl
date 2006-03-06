@@ -55,6 +55,7 @@ commands_test() ->
        fun enoent/2,
        fun directory_content/2,
        fun enotdir/2,
+       fun multiple_requests/2,
        modification_time (erlang:localtime ())]).
 
 directory_type (Filesystem, Dir) ->
@@ -93,6 +94,11 @@ modification_time (Before) ->
 	    {2, Time, After, true} = {2, Time, After, Time =< After}
     end.
     
+multiple_requests (File_system, Dir) ->
+    Filename = filename:join (Dir, "toto"),
+    File_system ! {self(), Filename, [type, modification_time]},
+    {File_system, Filename, [{type, regular}, {modification_time, {{_,_,_},{_,_,_}}}]} = receive_one ().
+
 serve_a_crashing_fun_test () ->
     Previous_processes = processes(),
     catch filesystem:serve (fun (_) -> exit (suicide) end),
@@ -126,8 +132,6 @@ serve_a_crashing_client_test () ->
 	    throw (timeout)
     end.
 
-%%% multiple_requests_test () ->
-%%%     ok = not_coded.
 fake_file_system (Instructions) ->
     receive
 	{Client, Path, [Command]} ->
@@ -137,33 +141,30 @@ fake_file_system (Instructions) ->
 	    bye
     end.
 
+time1() ->
+    {{2006, 3, 2}, {22, 30, 00}}.
+
+fake_tree () ->
+    [{"/root/dir", directory, time1(),
+      [{"file", regular, time1()},
+       {"file2", regular, time1()},
+       {"sub", directory, time1(),
+	[{"file3", regular, time1()}]},
+       {"sub2", directory, time1(),
+	[{"file4", regular, time1()},
+	 {"sub3", directory, time1(),
+	 [{"file5", regular, time1()}]}]}]}].
+
+list_recursively_empty_test () ->
+    F = testing:file_system ([{"/dev/null", directory, time, []}]),
+    [] = filesystem:list_recursively (F, "/dev/null"),
+    F ! stop.
+
 list_recursively_test () ->
-    lists:foreach (
-      fun ({Root, Fake_instructions, Expected_result}) ->
-	      F = spawn (?MODULE, fake_file_system, [dict:from_list (Fake_instructions)]),
-	      Result = filesystem:list_recursively (F, Root),
-	      F ! stop,
-	      same_elements = adlib:compare (Expected_result, Result)
-      end,
-      [{"/tmp",  [{{"/tmp", directory_content}, []}], []},
-       {"/home",
-	[{{"/home", directory_content}, ["a", "b"]},
-	 {{"/home/a", type}, regular},
-	 {{"/home/b", type}, regular}],
-	["/home/a", "/home/b"]} ,
-       {"/root/dir",
-	[{{"/root/dir", directory_content}, ["file", "sub", "file2", "sub2"]},
-	 {{"/root/dir/file", type}, regular},
-	 {{"/root/dir/file2", type}, regular},
- 	 {{"/root/dir/sub/file3", type}, regular},
- 	 {{"/root/dir/sub2/file4", type}, regular},
- 	 {{"/root/dir/sub2/sub3/file5", type}, regular},
-	 {{"/root/dir/sub", type}, directory},
- 	 {{"/root/dir/sub2", type}, directory},
- 	 {{"/root/dir/sub2/sub3", type}, directory},
-	 {{"/root/dir/sub", directory_content}, ["file3"]},
-	 {{"/root/dir/sub2", directory_content}, ["sub3", "file4"]},
-	 {{"/root/dir/sub2/sub3", directory_content}, ["file5"]}],
+    F = testing:file_system (fake_tree()),
+    Result = filesystem:list_recursively (F, "/root/dir"),
+    F ! stop,
+    Expected_result =
 	["/root/dir/file",
 	 "/root/dir/file2",
 	 "/root/dir/sub/file3",
@@ -171,7 +172,47 @@ list_recursively_test () ->
 	 "/root/dir/sub2/sub3/file5",
 	 "/root/dir/sub",
 	 "/root/dir/sub2",
-	 "/root/dir/sub2/sub3"]}]).
+	 "/root/dir/sub2/sub3"],
+    same_elements = adlib:compare (Expected_result, Result).
 
 list_recursively_with_additional_info_test () ->
-    ok.
+    F = testing:file_system (fake_tree()),
+    Result = filesystem:list_recursively (F, "/root/dir/sub2", [type]),
+    F ! stop,
+    Expected_result =
+	[{"/root/dir/sub2/file4", regular},
+	 {"/root/dir/sub2/sub3", directory},
+	 {"/root/dir/sub2/sub3/file5", regular}],
+    same_elements = adlib:compare (Expected_result, Result).    
+
+list_recursively_with_bad_link_test () ->
+    F = spawn (?MODULE, bad_link_file_system_loop, []),
+    Result = filesystem:list_recursively (F, "/dir"),
+    F ! stop,
+    Expected_result =
+	["/dir/foo", "/dir/sub", "/dir/sub/bar"],
+    same_elements = adlib:compare (Expected_result, Result).
+
+bad_link_file_system_loop () ->    
+    receive
+	{Pid, "/dir", [directory_content]} ->
+	    Pid ! {self(), "/dir", [{directory_content, ["foo", "bad_link", "sub"]}]},
+	    bad_link_file_system_loop();
+	 {Pid, "/dir/foo", [type]} ->
+	    Pid ! {self(), "/dir/foo", [{type, regular}]},
+	    bad_link_file_system_loop();
+	 {Pid, "/dir/bad_link", [type]} ->
+	    Pid ! {self(), "/dir/bad_link", {error, enoent}},
+	    bad_link_file_system_loop();
+	 {Pid, "/dir/sub", [type]} ->
+	    Pid ! {self(), "/dir/sub", [{type, directory}]},
+	    bad_link_file_system_loop();
+	{Pid, "/dir/sub", [directory_content]} ->
+	    Pid ! {self(), "/dir/sub", [{directory_content, ["bar"]}]},
+	    bad_link_file_system_loop();
+	 {Pid, "/dir/sub/bar", [type]} ->
+	    Pid ! {self(), "/dir/sub/bar", [{type, regular}]},
+	    bad_link_file_system_loop();
+	stop ->
+	    bye
+    end.
