@@ -246,5 +246,40 @@ With pattern matching, the components of complex values returned by
 functions can be tested or bound for further use, all in a single
 expression.
 
+Here is a complete example of a unit test:
+
+unique_test() ->	[] = adlib:unique([]),	Sequence = lists:seq(1,20),	Sequence = adlib:unique(Sequence),	[1,3,6,12] = adlib:unique([1,1,3,1,6,12,6,1]).
+
+*** Declarative programming
+
+Pattern matching has another use in functional languages, which is to define functions declaratively. A function can have several clauses, according to the form (pattern) of its arguments. Typically, there will be a clause for the general case and specific clauses for borderline cases. There is a profound ressemblance, and synergy, between this and TDD, especially in its purest form when a function is designed gradually by making it work for increasingly complex examples, one at a time.
+
+For example, let's revisit the classic Fibonacci example, which Kent Beck uses in "Test-Driven Development".
+
+We'll start by creating a unit test and making an assertion about a single data point:
+
+>>>> Cf. adlib:contains/2 (DW au clavier).
+
+And that (aside from tail-call optimization) is the final answer in functional, declarative style. Note how naturally it came out of the tests. The two special cases never even get modified!
+
 *** Lambda, the ultimate mock
 
+Referential transparency, dynamic data structures and pattern matching all contribute to functions being easier to test, but what about the last step in the TDD cycle: simplifying the code through expressiveness and abstraction?
+
+Object-oriented languages use inheritance, interfaces and polymorphism for abstraction. I have often argued that TDD is good for object-oriented design because it pushes for the creation of interfaces or base classes, in order to attain testability. However, testing complex object designs is itself not easy, and as pointed out above, requires special techniques such as mocks. One of the problems with mocking is that it can't be done if the code under test has not been designed with this in mind (i.e. has been programmed to an interface rather than to a concrete class).
+
+In functional programming, the abstraction mecanism is the higher-order function: a function that only performs a restricted, abstract task, and delegates the rest (the specifics) to another function. The canonical example is a function that maps each element in a list to another. The abstract, higher-order function only deals with the traversal and the creation of the resulting list. The specific transformation is performed by another function.
+
+>>>> Convert previous unit test into data-driven (NC au clavier).
+
+This form of abstraction offers several advantages, in terms of testability, over object-oriented design:
+
+- the abstraction mecanism of functional programming, higher-order functions, intrinsically and necessarily offers an 'interface' or 'protocol' (the function signature);
+
+- the specific function must be passed in to the generic function, making it easy to pass in a dummy for the purposes of testing;
+
+- lamda expressions (closures) make it possible to create such dummy functions on the fly, within the test itself.
+
+- pattern matching (and dynamic typing) can drastically simplify the code of the lambda to avoid distracting from the generic function under test.
+
+>>>> TDD de adlib:first (NC au clavier).
