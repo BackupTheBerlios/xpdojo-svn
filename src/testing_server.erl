@@ -29,24 +29,37 @@
 
 -module(testing_server).
 
--export([start/3,stop/0,loop/4]).
+-export([start/3,stop/0,loop/5]).
 
 start(Dir,Notification,Options) ->
-    Pid = spawn (?MODULE, loop, [Dir, Notification, Options, init]),
+    Pid = spawn (?MODULE, loop, [Dir, Notification, Options, no_monitor, init]),
     register(testing_server,Pid),
+    Monitor = file_monitor:start (Dir, fun (Event, File_name) -> Pid ! {self(), Event, File_name} end),
+    Pid ! {monitor, Monitor},
     Pid.
 
 stop()->
     testing_server ! stop.
 
-loop (Dir, Notification, Options, State) ->
-    New_state = xpdojo:test_files (Dir, Options),
-	notify (Notification, New_state, State),
+loop (Dir, Notification, Options, no_monitor, State) ->
+    receive
+	{monitor, New_monitor} ->
+	    loop (Dir, Notification, Options, New_monitor, State)
+    end;
+loop (Dir, Notification, Options, Monitor, init) ->
+    State = xpdojo:test_files (Dir, Options),
+    Notification (State),
+    loop (Dir, Notification, Options, Monitor, State);
+loop (Dir, Notification, Options, Monitor, State) ->
     receive
 	stop ->
-	    ok
-    after 1000 ->
-	    loop (Dir, Notification, Options, New_state)
+	    file_monitor:stop(Monitor);
+	{Monitor, _, _} ->
+	    New_state = xpdojo:test_files (Dir, Options),
+	    notify (Notification, New_state, State),
+	    loop (Dir, Notification, Options, Monitor, New_state);
+	_ ->
+	    loop (Dir, Notification, Options, Monitor, State)
     end.
 
 notify (_, unchanged, _) ->
