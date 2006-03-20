@@ -1,0 +1,74 @@
+XP Dojo: plan de la présentation (2 heures)
+
+- Intro
+- Motivations
+- Binômage virtuel
+- Etat des lieux + démo
+- Ergonomie pilotée par les tests     
+- Intégration instantanée
+- Questions, discussion
+
+INTRO
+
+  Nicolas Charpentier, Dominic Williams, XP Dojo
+
+MOTIVATIONS
+
+* Le besoin
+
+* Un laboratoire
+  - se perfectionner à XP
+  - explorer convictions techniques et méthodologiques 
+
+* Logiciel libre et XP
+
+  - Avantages:
+     - livraisons fréquentes
+     - qualité
+
+  - adapter XP ?
+     - binômage
+     - vélocité
+     - client
+     - propriété collective
+
+  - XP Dojo répondra à ces besoins
+
+  - Vision: amplifier, extrémiser
+     - scénarios "séance"
+     - intégration instantanée
+     - simplicité, expressivité, métaphore
+     - tests de recette accessibles à la communauté
+     - priorités, vote
+
+  - Bénéfices pour projets classiques
+
+BINOMAGE VIRTUEL
+
+* Retour d'expérience
+
+* Vision XP Dojo
+
+  - présence, groupes
+  - voix
+  - programmation
+
+  - Bénéfices généraux :
+     - multisite
+     - bureaux normaux
+     - "coup de main"
+     - réglages personnels 
+
+ETAT DES LIEUX
+
+  - description
+  - démo
+
+ERGONOMIE PILOTEE PAR LES TESTS
+
+INTEGRATION INSTANTANEE
+
+  - pourquoi accélérer
+  - piloter par les tests
+  - refactoring
+  - suppression d'un outil externe
