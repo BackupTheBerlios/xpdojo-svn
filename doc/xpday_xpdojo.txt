@@ -15,7 +15,18 @@ INTRO
 MOTIVATIONS
 
 * Le besoin
+  - XP amène de nouveaux besoins ergonomique
+    - Navigation dans le code (applicatif et code)
+    - Binommage
+    - Besoin d'outils 'simple'
+  
+  - Des progrès récent
+    - Outils modernes plus riches
+    - Parfois limités, et pas 'totalement' orientés XP
+    - Concerne le monde Java
 
+  - Les outils restent hétorogènes.
+  
 * Un laboratoire
   - se perfectionner à XP
   - explorer convictions techniques et méthodologiques 
@@ -43,9 +54,20 @@ MOTIVATIONS
 
   - Bénéfices pour projets classiques
 
+ETAT DES LIEUX
+
+  - Présentation des participants
+  - TDD 'réactif'
+  - Automatisation des tâches de 'build'
+  - Démo
+
 BINOMAGE VIRTUEL
 
 * Retour d'expérience
+  - Contraintes matérielles
+  - Combinaison logicielle complexe à trouver
+  - Rythme/Motivation difficile à trouver
+  - Technique de binomage nouvelle.
 
 * Vision XP Dojo
 
@@ -59,12 +81,11 @@ BINOMAGE VIRTUEL
      - "coup de main"
      - réglages personnels 
 
-ETAT DES LIEUX
-
-  - description
-  - démo
 
 ERGONOMIE PILOTEE PAR LES TESTS
+
+  - Faciliter la navigation code/test
+  - Génération des modules applicatifs au rythme des TU
 
 INTEGRATION INSTANTANEE
 
