@@ -30,7 +30,7 @@
 -module(adlib).
 -export ([temporary_module_name/0, temporary_pathname/0]).
 -export([make_tree/2, delete_tree/1, use_tree/3, use_tree/4]).
--export([first/2, unique/1]).
+-export([unique/1]).
 -export([strip_whitespace/1, begins_with/2, begins_with/1, ends_with/2, ends_with/1]).
 -export([accumulate_if/3, accumulate_unless/3, is_below_directory/2]).
 -export([update_options/2]).
@@ -39,19 +39,6 @@
 -export([write_term/0]).
 
 -include_lib("kernel/include/file.hrl").
-
-first (Predicate, List) ->
-    first (Predicate, List, 1).
-
-first (_Predicate, [], _Position) ->
-    none;
-first (Predicate, List, Position) ->
-    first (Predicate, List, Position, Predicate(hd(List))).
-
-first (_Predicate, [H|_], Position, true) ->
-    {ok, {H, Position}};
-first (Predicate, [_|T], Position, false) ->
-    first (Predicate, T, Position+1).
 
 make_tree(Root,Tree) ->
     ok = file:make_dir(Root),
@@ -77,13 +64,10 @@ use_tree (Dir, Tree, Use_fun, Cleanup_fun) ->
     LastCall().
 
 temporary_pathname() ->
-    Possible_roots = [os:getenv(X) || X <- ["TMP","TEMP","HOME"], os:getenv(X)/=false],
-    {ok, {Root,_}} =
-	first(
-	  fun(X) -> filelib:is_dir(X) end,
-	  Possible_roots),
-    Pathname = filename:join(Root,unique_string()),
-    {error,enoent} = file:read_file_info(Pathname),
+    Possible_roots = [os:getenv (X) || X <- ["TMP", "TEMP", "HOME"], os:getenv (X) /= false],
+    Root = hd ([X || X <- Possible_roots, filelib:is_dir (X) == true]),
+    Pathname = filename:join (Root, unique_string()),
+    {error, enoent} = file:read_file_info (Pathname),
     Pathname.
 
 unique_string() ->

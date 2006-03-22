@@ -34,15 +34,13 @@ start (Name, Notify) ->
     spawn (?MODULE, loop, [Name, Notify, []]).
 
 loop (Name, Notify, Tree) ->
-    case file:read_file_info(Name) of
+    case filesystem:serve (
+	   fun(F) ->
+		   filesystem:list_recursively (F, Name, [type, modification_time])
+	   end) of
 	{error, enoent} ->
 	    Notify (nonexistent, Name);
-	{ok, _} ->
-	    List =
-		filesystem:serve (
-		  fun(F) ->
-			  filesystem:list_recursively (F, Name, [type, modification_time])
-		  end),
+	List when is_list(List) ->
 	    NewTree = 
 		[{Item, Time} || {Item, Type, Time} <- List, Type == regular],
 	    report (directory_tree:changes (Tree, NewTree), Notify),

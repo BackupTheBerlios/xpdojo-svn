@@ -70,8 +70,8 @@ regular_type (Filesystem, Dir) ->
 enoent (Filesystem, Dir) ->
     Filename = filename:join (Dir, "titi_is_not_toto"),
     Filesystem ! {self(), Filename, [type]},
-    {Filesystem, Filename, {error, Reason}} = receive_one (),
-    true = adlib:contains ({error, enoent}, Reason).
+    {Filesystem, Filename, Result} = receive_one (),
+    true = adlib:contains ({error, enoent}, Result).
     
 directory_content (Filesystem, Dir) ->
     Filesystem ! {self(), Dir, [directory_content]},
@@ -82,8 +82,8 @@ directory_content (Filesystem, Dir) ->
 enotdir (Filesystem, Dir) ->
     Filename = filename:join (Dir, "toto"),
     Filesystem ! {self(), Filename, [directory_content]},
-    {Filesystem, Filename, {error, Reason}} = receive_one (),
-    true = adlib:contains ({error, enotdir}, Reason).
+    {Filesystem, Filename, Result} = receive_one (),
+    true = adlib:contains ({error, enotdir}, Result).
 
 modification_time (Before) ->
     fun (Filesystem, Dir) ->
@@ -155,6 +155,13 @@ fake_tree () ->
 	 {"sub3", directory, time1(),
 	 [{"file5", regular, time1()}]}]}]}].
 
+list_recursively_enoent_test() ->
+    Instructions =
+	[{{"/tmp", directory_content}, {error, enoent}}],
+    F = spawn (?MODULE, fake_file_system, [dict:from_list (Instructions)]),
+    {error, enoent} = filesystem:list_recursively (F, "/tmp"),
+    F ! stop.
+    
 list_recursively_empty_test () ->
     F = testing:file_system ([{"/dev/null", directory, time, []}]),
     [] = filesystem:list_recursively (F, "/dev/null"),

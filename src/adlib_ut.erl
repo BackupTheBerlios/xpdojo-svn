@@ -115,12 +115,6 @@ use_tree_and_cleanup_test () ->
     end,
     {true, Tmp_dirname} = get (cleanup_called).
     
-first_test() ->
-	Three = fun(X) -> X == 3 end,
-	{ok, {3,2}} = adlib:first(Three, lists:seq(2,10)),
-	none = adlib:first(Three, lists:seq(4,10)),
-	{ok, {toto,4}} = adlib:first(fun(X) -> is_atom(X) end, [3,"Hello",{1,haha},toto,3.2]).
-
 unique_test() ->
 	[] = adlib:unique([]),
 	Sequence = lists:seq(1,20),

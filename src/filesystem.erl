@@ -89,16 +89,28 @@ worker_loop (Controller) ->
     end.
 
 type (Path) ->
-    {ok, File_info} = file:read_file_info (Path),
-    File_info#file_info.type.
+    case file:read_file_info (Path) of
+	{ok, File_info} ->
+	    File_info#file_info.type;
+	Other ->
+	    Other
+    end.
 
 directory_content (Path) ->
-    {ok, Filename_list} = file:list_dir (Path),
-    Filename_list.
+    case file:list_dir (Path) of
+	{ok, Filename_list} ->
+	    Filename_list;
+	Other ->
+	    Other
+    end.
 
 modification_time (Path) ->
-    {ok, File_info} = file:read_file_info (Path),
-    File_info#file_info.mtime.
+    case file:read_file_info (Path) of
+	{ok, File_info} ->
+	    File_info#file_info.mtime;
+	Other ->
+	    Other
+    end.
 
 list_recursively (F, R) ->
     list_recursively (F, R, []).
@@ -111,6 +123,8 @@ list_recursively_loop (Acc, 0, _) ->
     Acc;
 list_recursively_loop (Acc, Pending, Options) ->
     receive
+	{_, _, [{directory_content, {error, Reason}}]} ->
+	    {error, Reason};
 	{File_system, Path, [{directory_content, Content}]} ->
 	    Message_count = lists:foldl (
 	      fun (Entry, Count) -> 
@@ -126,6 +140,8 @@ list_recursively_loop (Acc, Pending, Options) ->
 	    File_system ! {self(), Path, [directory_content]},
 	    list_recursively_loop ([pack (Path, Option_results) | Acc], Pending, Options);
 	{_, _, {error, _}} ->
+	    list_recursively_loop (Acc, Pending - 1, Options);
+	{_, _, [{type, {error, _}} | _]} ->
 	    list_recursively_loop (Acc, Pending - 1, Options);
 	Other ->
 	    {unexpected_message, Other, Acc}

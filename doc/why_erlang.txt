@@ -31,7 +31,7 @@ Pour que ce paradigme soit possible, pragmatique et utile pour la construction d
 
 - structures de données natives, notamment les listes;
 
-- "compréhensions" de listes;
+- constructeur d'ensemble;
 
 - gestion automatique de la memoire (ramasse-miette);
 

@@ -1,9 +1,20 @@
 FOR FIRST RELEASE
 -----------------
 
+bugs:
+
+11:36 PM : Nicolas Charpentier: je viens de tomber sur un bug de testing_server
+11:36 PM : Nicolas Charpentier: ne pas faire de "cd" pendant qu'il tourne
+11:39 PM : Nicolas Charpentier: s'il a été lancé avec un chemin relatif
+11:39 PM : dominicwilliams: il se passe quoi?
+11:40 PM : Nicolas Charpentier: {badmatch, {error, enoent}}
+11:41 PM : Nicolas Charpentier: et le serveur 'reste' toujours là ..... (le process père n'est pas mort)
+11:41 PM : dominicwilliams: ok.
+11:42 PM : dominicwilliams: J'en ai trouvé un aussi: ne pas lancer le serveur après avoir lancé erl ailleurs que xpdojo/ebin
+
+
 Various refactoring:
 
-- improve readibility of adlib:fold_files.
 - stop using message passing in file_monitor_acceptance?
 - continue file_monitor_acceptance:complex_test
 - move all directory_tree stuff from adlib to directory_tree module.
