@@ -36,6 +36,23 @@ INTRO
 
 SURVOL DU LANGAGE ERLANG
 
+- Langage 'industriel' supporté par Ericsson
+- Langage fonctionnel
+- Support 'natif' de parallélisme
+- Fonctionnement
+  - Machine virtuelle
+  - ByteCode chargé dynamiquement
+  - Machine virtuelle embarque un interpreteur
+- Librairies fournies dans le package:
+  - compilateur, debuggeur, profiler,
+  - Base de données reparties (Mnésia)
+  - ORB Corba
+  - Serveur HTTP
+  - GS: interfae graphique basée sur TK
+- Extensions pour la programmation distribuée
+  - Framework OTP
+  - Communication entre les machines virtuelles
+
 TESTABILITE
 
 - tests canoniques
@@ -72,6 +89,15 @@ LAMBDA, THE ULTIMATE MOCK
 - Exemple: first/2
 
 PROGRAMMATION CONCURRENTE
+
+- Beaucoup d'applications sont multi-threadées
+- Sont elle testable ?
+  - oui mais pas facilement
+- Est on certain du résultat ?
+  - non
+- Faiblesses conceptuelles du 'multithreading'
+  - Développement thread-safe et YAGNI
+  - Décourage l'encapsulation
 
 DSL
 
