@@ -75,11 +75,6 @@ unique_test() ->
 
 PROGRAMMATION PAR CAS (logique)
 
-- Une fonction est définie par sa signature
-  - nom
-  - arité
-- Une même fonction peut avoir plusieurs 'clauses'
-
 - Exemple: contains/2
 
 LAMBDA, THE ULTIMATE MOCK
@@ -103,6 +98,13 @@ PROGRAMMATION CONCURRENTE
 - Faiblesses conceptuelles du 'multithreading'
   - Développement thread-safe et YAGNI
   - Décourage l'encapsulation
+
+- Modèle Erlang
+  - Processus léger
+  - Processus isolés
+  - Aucunes données partagées
+  - Basé sur l'échange de messages asynchrones
+    - Modèle testable
 
 DSL
 
