@@ -21,6 +21,7 @@ INTRO
 - Lisp (1958), ML (1977), Haskell (1987), Erlang (1991)...
 - Le paradigme fonctionnel
   - fonctions pures (pas d'effets de bord, pas d'état)
+  - valeurs immuables, évaluation
   - transparence référentielle
 - Les caractéristiques:
   - fonctions de première classe

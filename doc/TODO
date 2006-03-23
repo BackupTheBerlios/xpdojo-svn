@@ -11,7 +11,11 @@ bugs:
 11:41 PM : Nicolas Charpentier: et le serveur 'reste' toujours là ..... (le process père n'est pas mort)
 11:41 PM : dominicwilliams: ok.
 11:42 PM : dominicwilliams: J'en ai trouvé un aussi: ne pas lancer le serveur après avoir lancé erl ailleurs que xpdojo/ebin
-
+11:43 PM : Nicolas Charpentier: ??
+11:43 PM : Nicolas Charpentier: non
+11:43 PM : Nicolas Charpentier: ça ça marche chez moi
+11:43 PM : Nicolas Charpentier: (j'ai le code pathz correctà
+11:45 PM : dominicwilliams: moi aussi: c'est plus subtil: quand un fichier ne compile pas il boucle indéfiniment en crachant l'erreur tant que tu ne le corrige pas.
 
 Various refactoring:
 
