@@ -24,8 +24,7 @@ MOTIVATIONS
     - Outils modernes plus riches
     - Parfois limités, et pas 'totalement' orientés XP
     - Concerne le monde Java
-
-  - Les outils restent hétorogènes.
+    - Les outils restent hétorogènes.
   
 * Un laboratoire
   - se perfectionner à XP
