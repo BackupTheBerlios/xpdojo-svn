@@ -5,7 +5,6 @@
 -compile(export_all).
 -import(testing,
 	[use_and_purge_tree/2,
-	 receive_one_from/1,
 	 purge_messages/1]).
 
 start_green_bar_test() ->
