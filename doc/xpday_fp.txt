@@ -74,7 +74,12 @@ unique_test() ->
   [1, 3, 6, 12] = unique([1, 1, 3, 1, 6, 12, 6, 1]).
 
 PROGRAMMATION PAR CAS (logique)
-- ...
+
+- Une fonction est définie par sa signature
+  - nom
+  - arité
+- Une même fonction peut avoir plusieurs 'clauses'
+
 - Exemple: contains/2
 
 LAMBDA, THE ULTIMATE MOCK
