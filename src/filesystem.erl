@@ -1,4 +1,4 @@
-%%% Copyright (c) 2005 Dominic Williams
+%%% Copyright (c) 2005 Dominic Williams, Nicolas Charpentier
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -100,6 +100,8 @@ directory_content (Path) ->
     case file:list_dir (Path) of
 	{ok, Filename_list} ->
 	    Filename_list;
+	{error,eio} ->
+	    {error,enotdir};
 	Other ->
 	    Other
     end.

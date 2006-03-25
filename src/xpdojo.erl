@@ -29,7 +29,7 @@
 
 -module(xpdojo).
 
--export([test_files/1, test_files/2, default_options/0]).
+-export([test_files/1, test_files/2, default_options/0, error_only_report/0]).
 
 default_options () ->
     [{unit_modules_filter, adlib:ends_with("ut")},
@@ -49,7 +49,7 @@ test_files (Directory, Options) ->
            fun find_differences/2,
            Compile,
            fun post_compile/2,
-           fun (_Dir2, Modules) -> acceptance (Unit(Modules)) end],
+           fun (_Dir2, Modules) -> acceptance (All_options,Unit(Modules)) end],
           []).
 
 with (Directory, [Fun|T], Acc) ->
@@ -124,13 +124,14 @@ unit_work (_, no_work, Module_count, Compiled_modules) ->
     [{modules, Module_count, Compiled_modules}].
 
 
-acceptance ([{modules, Count, Compiled_modules}]) ->
+acceptance (_,[{modules, Count, Compiled_modules}]) ->
     [{modules, Count, length (Compiled_modules)}];
-acceptance ([{unit, Total, Successes}, {modules, Count, Compiled_modules}]) when Successes < Total ->
+acceptance (_,[{unit, Total, Successes}, {modules, Count, Compiled_modules}]) when Successes < Total ->
     [{unit, Total, Successes}, {modules, Count, length (Compiled_modules)}];
-acceptance ([Unit_summary, {modules, Module_total, Compiled_modules}]) ->
+acceptance (Options,[Unit_summary, {modules, Module_total, Compiled_modules}]) ->
+    {value, {_,  Report_function}} = lists:keysearch (report_function, 1, Options),
     test_pass (
-      {adlib:ends_with ("_acceptance"), adlib:ends_with ("_test"), fun (X) -> io:fwrite ("~p~n",[X]) end}, 
+      {adlib:ends_with ("_acceptance"), adlib:ends_with ("_test"), Report_function}, 
       Compiled_modules, 
       acceptance, 
       [Unit_summary, {modules,Module_total,length(Compiled_modules)}]).
@@ -163,3 +164,12 @@ report ([], _, _) ->
 simple_report ({Phase, Term}) ->
     io:fwrite("~p: ~p~n", [Phase, Term]).
 
+error_only_report() ->
+    fun error_only_report/1.
+
+error_only_report({Phase,{error,Error,Reason,Extra}}) ->
+    io:fwrite("~p: ~p~n", [Phase, {error,Error,Reason,Extra}]);
+error_only_report({Phase,{error,Error,Reason}}) ->
+    io:fwrite("~p: ~p~n", [Phase, {error,Error,Reason}]);
+error_only_report(_) ->
+    nothing.

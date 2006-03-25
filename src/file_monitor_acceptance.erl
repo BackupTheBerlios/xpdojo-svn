@@ -113,8 +113,7 @@ revival_test() ->
 	      {deleted, File_name} = receive_one_from(Pid),
 	      file:write_file (File_name, "Goodbye"),
 	      {found, File_name} = receive_one_from(Pid),
-	      file_monitor:stop(Pid),
-	      timer:sleep(1000)
+	      file_monitor:stop(Pid)
       end).
     
 crash_test() ->
@@ -126,8 +125,8 @@ crash_test() ->
 	      Pid = file_monitor:start (Dir, notify()),
 	      purge_messages(5000),
 	      exit (Pid, kill),
-	      false = is_process_alive (Pid),
 	      timer:sleep(1000),
+	      false = is_process_alive (Pid),
 	      same_elements = adlib:compare (Previous_processes, processes())
       end).
     

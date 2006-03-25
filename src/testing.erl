@@ -66,16 +66,24 @@ use_and_purge_tree (Tree, Fun) ->
       end).
 
 purge_messages() ->
-    purge_messages(0).
+    purge_messages(0,silent).
 
 purge_messages(Tempo) ->
+    purge_messages(Tempo,silent).
+
+purge_messages(Tempo,Verbosity) ->
     receive
 	Message ->
-	    io:fwrite("Purged: ~p~n", [Message]),
+	    print_purged_message(Message,Verbosity),
 	    purge_messages(Tempo)
     after Tempo ->
 	    ok
     end.
+
+print_purged_message(Message,verbose) ->
+    io:fwrite("Purged: ~p~n", [Message]);
+print_purged_message(_,_) ->
+    ok.
 
 wait_for_detectable_modification_time() ->
     timer:sleep (1000).
