@@ -64,9 +64,9 @@ with (_Directory, [], Acc) ->
 
 post_compile (_Directory, {{compiled, Compiled}, {failed, Failed}}) ->
     lists:foreach (
-      fun(Module) ->
+      fun({Module,Binary}) ->
               code:purge (Module),
-              {module, Module} = code:load_file (Module)
+              {module, Module} = code:load_binary (Module,"",Binary)
       end,
       Compiled),
     lists:foreach (
@@ -137,7 +137,7 @@ acceptance (Options,[Unit_summary, {modules, Module_total, Compiled_modules}]) -
       [Unit_summary, {modules,Module_total,length(Compiled_modules)}]).
 
 test_pass ({Module_filter, Function_filter, Report_function}, Modules, Pass_name, Acc) ->
-    Tests = [X || X <- Modules, Module_filter(X)],
+    Tests = [X || {X,_} <- Modules, Module_filter(X)],
     Results = testing:run_modules (Tests, Function_filter),
     {Total, FailureCount, Failures}
         = lists:foldl(

@@ -39,8 +39,8 @@ source_of_module_test () ->
       [source:module_file(bar, [foo])],
       fun (Dir, _) ->
 	      Source = filename:join (Dir, "bar.erl"),
-	      compile:file (Source),
-	      code:load_file (bar),
+	      {ok, Module, Binary} = compile:file (Source,[binary]),
+	      code:load_binary (Module,"",Binary),
 	      Source = compiling:source_of_module (bar)
       end).
     
@@ -80,7 +80,7 @@ compile_one_good_file_test() ->
     use_and_purge_tree (
       [{file, "foo.erl", source:module(foo,[bar])}],
       fun (Dir,_) ->
-	      {{compiled, [foo]}, {failed, []}} = compiling:compile (Dir, [filename:join (Dir, "foo.erl")], fun silent_report/1)
+	      {{compiled, [{foo,_}]}, {failed, []}} = compiling:compile (Dir, [filename:join (Dir, "foo.erl")], fun silent_report/1)
       end).
 
 compile_one_bad_file_test() ->
@@ -94,7 +94,7 @@ compile_all_kind_test() ->
     use_and_purge_tree (
       [{file, "foo.erl", source:module(foo,[bar])},{file, "bad_foo.erl", "-module(bad_foo).\nbla() -."},{file, "other_bad_foo.erl", "-module(other_bad_foo).\nbla() -."}],
       fun (Dir,_) ->
-	      {{compiled, [foo]}, {failed, [other_bad_foo,bad_foo]}} = compiling:compile (Dir, [filename:join (Dir, X ) || X <- ["foo.erl","bad_foo.erl","other_bad_foo.erl"]], fun silent_report/1)
+	      {{compiled, [{foo,_}]}, {failed, [other_bad_foo,bad_foo]}} = compiling:compile (Dir, [filename:join (Dir, X ) || X <- ["foo.erl","bad_foo.erl","other_bad_foo.erl"]], fun silent_report/1)
       end).
     
 compile_with_report_function_test() ->
@@ -114,3 +114,9 @@ compile_with_report_function_test() ->
       end).
 	 
     
+file_time_on_unknown_file_test() ->
+    use_and_purge_tree (
+      [{file, "first",""}],
+      fun (_Dir, _) ->
+	      {{0,0,0},{0,0,0}} = compiling:file_time(filename:join(adlib:temporary_pathname(),"unknown_file"))
+      end).

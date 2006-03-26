@@ -94,4 +94,5 @@ fake_file_system_test () ->
 	   {F, "/tmp/foo", [{type, regular}]},	   
 	   {F, "/tmp/bar", [{modification_time, {{2005,3,18},{9,00,03}}}]},	   
 	   {F, "/home/dodo/.emacs", [{directory_content, {error, enotdir}}]}],
-	  Messages).
+	  Messages),
+    F ! stop.

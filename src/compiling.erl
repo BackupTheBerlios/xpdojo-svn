@@ -62,15 +62,34 @@ modules_from_directory (Modules, Directory) ->
        Modules).
 
 module_time (Module) ->
-    file_time (element (2, code:is_loaded (Module))).
+    element(
+      2,
+      element(
+	2,
+	lists:keysearch(
+	  time,
+	  1,
+	  element(
+	    2,
+	    element(
+	      2,
+	      lists:keysearch(compile,1,Module:module_info())))))).
 
 file_time (File) ->
-    {ok, File_info} = file:read_file_info(File),
-    {{Y,M,D},{H,Min,S}} = File_info#file_info.mtime,
+    case file:read_file_info(File) of
+	{ok, File_info} ->
+	    {{Y,M,D},{H,Min,S}} = File_info#file_info.mtime,
+	    {{Y,M,D},{H,Min,S}};
+	_ ->
+	    {{0,0,0},{0,0,0}}
+    end.
+
+flaten_gmt_file_time(File) ->
+    {{Y,M,D},{H,Min,S}} = erlang:localtime_to_universaltime(file_time (File)),
     {Y,M,D,H,Min,S}.
 
 is_modified (Module, File) ->
-    module_time (Module) < file_time (File).
+    module_time (Module) < flaten_gmt_file_time (File).
 
 differences (Modules, Files) ->
     differences (Modules, Files, fun is_modified/2).
@@ -118,11 +137,11 @@ compile (_Dir, [], _Fun, {Compiled, Failed}) ->
     {{compiled, Compiled}, {failed, Failed}};
 compile (Dir, [File|T], Report_function, Acc) ->
     compile (Dir, T, Report_function,
-	     classify_by_result (Report_function, compile:file(File, [return]), File, Acc)).
+	     classify_by_result (Report_function, compile:file(File, [binary,return]), File, Acc)).
 
-classify_by_result (Report_function, {ok, Module, Warnings}, File, {Compiled, Failed}) ->
+classify_by_result (Report_function, {ok, Module, Binary,Warnings}, File, {Compiled, Failed}) ->
     Report_function ({compile, {ok, File, Warnings}}),
-    {[Module|Compiled], Failed};
+    {[{Module,Binary}|Compiled], Failed};
 classify_by_result (Report_function, {error,Errors,Warnings}, File, {Compiled, Failed}) ->
     Report_function ({compile, {error, File, Errors, Warnings}}),
     {Compiled, [module_name (File) | Failed]}.

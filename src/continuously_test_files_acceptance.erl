@@ -80,6 +80,9 @@ silent_report(_) ->
 options() ->
     [{report_function, fun silent_report/1}].
 
+wait() ->
+    timer:sleep(1000).
+
 directory_empty_test() ->
     use_and_purge_tree (
       [],
@@ -191,7 +194,7 @@ reload_changed_file_test() ->
       [foo(), foo_ut()],
       fun (Dir,_) ->
               [{acceptance,0,0}, {unit,1,1}, {modules,2,2}] = xpdojo:test_files (Dir, options()),
-              timer:sleep(2000),
+              wait(),
               file:write_file(filename:join(Dir,"foo_ut.erl"),
                               "-module(foo_ut).\n"
                               "-export([foo_test/0]).\n"
@@ -291,13 +294,13 @@ continue_after_compile_error_test() ->
       [foo()],
       fun (Dir,_) ->
               [{acceptance,0,0},{unit,0,0},{modules,1,1}] = xpdojo:test_files (Dir, options()),
-              timer:sleep(2000),
+              wait(),
               file:write_file(filename:join(Dir,"foo.erl"),
                               "-module(foo).\n"
                               "-export([yo/0]).\n"
                               "yo() - yohoho."),
               [{modules,1,0}] = xpdojo:test_files (Dir, options()),
-              timer:sleep(2000),
+              wait(),
               file:write_file(filename:join(Dir,"foo.erl"),
                               "-module(foo).\n"
                               "-export([yo/0]).\n"
@@ -363,9 +366,10 @@ custom_report_function_unit_success_test() ->
     Options = 
         [{report_function, fun my_report_function/1}],
     use_and_purge_tree (
-      [foo_ut()],
+      [foo_ut(),foo()],
       fun(Dir,_) ->
-              [{acceptance, 0, 0}, {unit, 1, 1}, {modules, 1 ,1}] = xpdojo:test_files (Dir, Options),
+              [{acceptance, 0, 0}, {unit, 1, 1}, {modules, 2,2}] = xpdojo:test_files (Dir, Options),
+              check_compile_message_reception(),
               check_compile_message_reception(),
               ok = receive
                        {unit, {ok, foo_ut}} -> 
