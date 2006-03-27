@@ -37,6 +37,15 @@ foo() ->
       "-export([bar/0]).",
       "bar() -> ok."]}.
 
+unique_erlang_module() ->
+    {file,"uniqueModule.erl",
+     ["-module(uniqueModule).",
+      "-export([bar/0]).",
+      "bar() -> ok."]}.
+
+unique_erlang_module_beam() ->
+    "uniqueModule.beam".
+
 foo_ut() ->
     {file,"foo_ut.erl",
      ["-module(foo_ut).",
@@ -456,3 +465,14 @@ bad_links_test() ->
      fun (Dir, _) ->
             file:delete (filename:join (Dir, "titi.erl"))
      end).
+
+no_beam_creation_test() ->
+    adlib:use_tree(
+      adlib:temporary_pathname(),
+      [unique_erlang_module()],
+      fun (Dir, _) ->
+              [{acceptance,0,0}, {unit,0,0}, {modules,1,1}] = xpdojo:test_files (Dir, options()),
+	      {ok,CurrentDir} = file:get_cwd(),
+	      {error,enoent} = file:open(filename:join(CurrentDir,unique_erlang_module_beam()),[read])
+      end).
+    
