@@ -130,3 +130,20 @@ crash_test() ->
 	      same_elements = adlib:compare (Previous_processes, processes())
       end).
     
+directory_change_test() ->
+    use_and_purge_tree (
+      [{file, "f1", ""},
+       {directory, "d1", [{file, "d1f1", ""}]}],
+      fun (Dir, _) ->
+	      {ok,Cwd} = file:get_cwd(),
+	      file:set_cwd(Dir),
+	      Previous_processes = processes(),
+	      Pid = file_monitor:start (".", notify()),
+	      purge_messages(5000),
+	      file:set_cwd("/"),
+	      timer:sleep(3000),
+	      true = is_process_alive (Pid),
+	      file_monitor:stop(Pid),
+	      file:set_cwd(Cwd)
+      end).
+

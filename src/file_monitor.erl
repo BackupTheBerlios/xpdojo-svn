@@ -30,16 +30,16 @@
 -export([start/2, stop/1, loop/3]).
 -include_lib("kernel/include/file.hrl").
 
-start (Name, Notify) ->
-    spawn (?MODULE, loop, [Name, Notify, []]).
+start (Directory, Notify) ->
+    spawn (?MODULE, loop, [filename:absname(Directory), Notify, []]).
 
-loop (Name, Notify, Tree) ->
+loop (Directory, Notify, Tree) ->
     case filesystem:serve (
 	   fun(F) ->
-		   filesystem:list_recursively (F, Name, [type, modification_time])
+		   filesystem:list_recursively (F, Directory, [type, modification_time])
 	   end) of
 	{error, enoent} ->
-	    Notify (nonexistent, Name);
+	    Notify (nonexistent, Directory);
 	List when is_list(List) ->
 	    NewTree = 
 		[{Item, Time} || {Item, Type, Time} <- List, Type == regular],
@@ -49,7 +49,7 @@ loop (Name, Notify, Tree) ->
 		    bye
 	    after
 		0 ->
-		    loop (Name, Notify, NewTree)
+		    loop (Directory, Notify, NewTree)
 	    end
     end.
 
