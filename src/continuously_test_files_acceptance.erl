@@ -251,51 +251,25 @@ continuous_tester_test() ->
     use_and_purge_tree (
       [foo(), foo_ut()],
       fun (Dir,_) ->
-              Timeout = 1000,
               Key = now(),
               Self = self(),
               Notification = fun ( Message ) ->
                                      Self ! {Key,Message}
                              end,
-              testing_server:start(Dir,Notification,options()),
-              ok = receive 
-                       {Key,[{acceptance,0,0}, {unit,1,1}, {modules,2,2}]} ->
-                           ok;
-                       Other ->
-                           {other_message,Other}
-                   after Timeout ->
-                           first_timeout
-                   end,
-              ok = receive 
-                       _ ->
-                           unexpected_message
-                   after Timeout ->
-                           ok
-                   end,
-              file:write_file(filename:join(Dir,"bar.erl"),
-                              "-module(bar).\n"
-                              "-export([foo/0]).\n"
-                              "foo() -> yohoho."),            
-
-              ok = receive 
-                       {Key,[{acceptance,0,0}, {unit,1,1}, {modules,3,3}]} ->
-                           ok;
-                       _ ->
-                           still_other_message
-                   after Timeout ->
-                           second_timeout
-                   end,
-              testing_server:stop(),
-              file:write_file(filename:join(Dir,"pepe.erl"),
-                              "-module(pepe).\n"
-                              "-export([juan/0]).\n"
-                              "juan() -> hola."),             
-              ok = receive 
-                       _ ->
-                           unexpected_message
-                   after Timeout ->
-                           ok
-                   end
+	      lists:foldl(
+		fun({Action, Expected_message}, Index) ->
+			Action(),
+			{Index, Expected_message} = {Index, receive Message -> Message after 1000 -> timeout end}
+		end,
+		1,
+		[{fun() -> testing_server:start (Dir, Notification, options()) end,
+		  {Key, [{acceptance, 0, 0}, {unit, 1, 1}, {modules, 2, 2}]}},
+		 {fun() -> file:write_file (filename:join (Dir, "bar.erl"), source:module (bar, [foo])) end,
+		  {Key, [{acceptance, 0, 0}, {unit, 1, 1}, {modules, 3, 3}]}},
+		 {fun() -> testing_server:stop() end,
+		  timeout},
+		 {fun() -> file:write_file (filename:join (Dir, "pepe.erl"), source:module (pepe, [juan])) end,
+		  timeout}])
       end).
 
 continue_after_compile_error_test() ->
