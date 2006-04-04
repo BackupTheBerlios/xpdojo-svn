@@ -62,18 +62,20 @@ modules_from_directory (Modules, Directory) ->
        Modules).
 
 module_time (Module) ->
-    element(
-      2,
-      element(
-	2,
-	lists:keysearch(
-	  time,
-	  1,
-	  element(
-	    2,
-	    element(
-	      2,
-	      lists:keysearch(compile,1,Module:module_info())))))).
+	{value, {time, Result}} = lists:keysearch (time, 1, Module:module_info(compile)),
+	Result.
+    % element(
+      % 2,
+      % element(
+	% 2,
+	% lists:keysearch(
+	  % time,
+	  % 1,
+	  % element(
+	    % 2,
+	    % element(
+	      % 2,
+	      % lists:keysearch(compile,1,Module:module_info())))))).
 
 file_time (File) ->
     case file:read_file_info(File) of
