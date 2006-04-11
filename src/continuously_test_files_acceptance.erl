@@ -251,21 +251,47 @@ continuous_tester_test() ->
     use_and_purge_tree (
       [foo(), foo_ut()],
       fun (Dir,_) ->
+	      Silly_server_writer = fun(Silly_key) ->
+					    file:write_file(
+					      filename:join(Dir, "silly.erl"),
+					      source:module(
+						silly, [{loop,
+							 ["receive",
+							  "{Pid, key} ->",
+							  "Pid ! " ++ Silly_key ++ ",",
+							  "loop();",
+							  "hotupgrade ->",
+							  "?MODULE:loop()",
+							  "end."]}]))
+				    end,
+	      Silly_server_writer("charpi"),
+	      {compile, {ok, silly}} = {compile, compile:file(filename:join(Dir,"silly"), [{outdir, Dir}])},
+	      {load, {module, silly}} = {load, code:load_abs(filename:join(Dir, "silly"))},
+	      Silly = spawn(silly, loop, []),
+	      
               Key = now(),
               Self = self(),
               Notification = fun ( Message ) ->
                                      Self ! {Key,Message}
                              end,
+
 	      lists:foldl(
 		fun({Action, Expected_message}, Index) ->
 			Action(),
-			{Index, Expected_message} = {Index, receive Message -> Message after 1000 -> timeout end}
+			{Index, Expected_message} = {Index, receive Message -> Message after 1000 -> timeout end},
+			Index + 1
 		end,
 		1,
-		[{fun() -> testing_server:start (Dir, Notification, options()) end,
-		  {Key, [{acceptance, 0, 0}, {unit, 1, 1}, {modules, 2, 2}]}},
-		 {fun() -> file:write_file (filename:join (Dir, "bar.erl"), source:module (bar, [foo])) end,
+		[{fun() -> Silly ! {Self, key} end,
+		  charpi},
+		 {fun() -> testing_server:start (Dir, Notification, options()) end,
 		  {Key, [{acceptance, 0, 0}, {unit, 1, 1}, {modules, 3, 3}]}},
+		 { fun() -> timer:sleep(1000),Silly_server_writer("domi") end,
+		  {Key, [{acceptance, 0, 0}, {unit, 1, 1}, {modules, 3, 3}]}},
+		 {fun() -> Silly ! {Self, key} end,
+		  charpi},
+		 {fun() -> file:write_file (filename:join (Dir, "bar.erl"), source:module (bar, [foo])) end,
+		  {Key, [{acceptance, 0, 0}, {unit, 1, 1}, {modules, 4, 4}]}},
 		 {fun() -> testing_server:stop() end,
 		  timeout},
 		 {fun() -> file:write_file (filename:join (Dir, "pepe.erl"), source:module (pepe, [juan])) end,
