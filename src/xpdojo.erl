@@ -39,18 +39,36 @@ default_options () ->
 test_files (Directory) ->
     test_files (Directory, default_options ()).
 
+start_slave() ->
+    {ok, Host_name} = inet:gethostname(),
+    case slave:start (list_to_atom (Host_name), slave) of
+	{ok, Slave} -> Slave;
+	{error, {already_running, Slave}} -> Slave;
+	{error, Reason} -> exit({noslave, Reason})
+    end.
+
+stop_slave(Options) ->
+    {value, {slave, Node}} = lists:keysearch(slave, 1, Options),
+    ok = slave:stop(Node).
+
+update_options(Options) ->
+    [{slave, start_slave()} | adlib:update_options (Options, default_options ())].
+
 test_files (Directory, Options) ->
     Dir = adlib:normalise_path (filename:absname (Directory)),
-    All_options = adlib:update_options (Options, default_options ()),
+    All_options = update_options (Options),
     Unit = unit (All_options),
     Compile = compile (All_options),
-    with (Dir,
-          [fun find_modules/2,
-           fun find_differences/2,
-           Compile,
-           fun post_compile/2,
-           fun (_Dir2, Modules) -> acceptance (All_options,Unit(Modules)) end],
-          []).
+    Result = 
+	with (Dir,
+	      [fun find_modules/2,
+	       fun find_differences/2,
+	       Compile,
+	       fun post_compile/2,
+	       fun (_Dir2, Modules) -> acceptance (All_options,Unit(Modules)) end],
+	      []),
+    stop_slave(All_options),
+    Result.
 
 with (Directory, [Fun|T], Acc) ->
     case Fun (Directory, Acc) of

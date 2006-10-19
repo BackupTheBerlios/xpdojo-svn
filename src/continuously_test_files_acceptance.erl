@@ -286,7 +286,7 @@ continuous_tester_test() ->
 		  charpi},
 		 {fun() -> testing_server:start (Dir, Notification, options()) end,
 		  {Key, [{acceptance, 0, 0}, {unit, 1, 1}, {modules, 3, 3}]}},
-		 { fun() -> timer:sleep(1000),Silly_server_writer("domi") end,
+		 {fun() -> timer:sleep(1000),Silly_server_writer("domi") end,
 		  {Key, [{acceptance, 0, 0}, {unit, 1, 1}, {modules, 3, 3}]}},
 		 {fun() -> Silly ! {Self, key} end,
 		  charpi},

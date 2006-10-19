@@ -137,7 +137,6 @@ directory_change_test() ->
       fun (Dir, _) ->
 	      {ok,Cwd} = file:get_cwd(),
 	      file:set_cwd(Dir),
-	      Previous_processes = processes(),
 	      Pid = file_monitor:start (".", notify()),
 	      purge_messages(5000),
 	      file:set_cwd("/"),
