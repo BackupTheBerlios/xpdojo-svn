@@ -32,6 +32,24 @@
 
 %% Actual test functions: use _test suffix
 
+runner_test() ->
+    Self = self(),
+    Notify = fun(Token, Message) -> Self ! {Token, Message} end,
+    Runner = spawn(testing, runner, [Notify]),
+    lists:foldl(
+      fun({Fun, Predicate}, Count) ->
+	      Token = make_ref (),
+	      Runner ! {Token, test, Fun},
+	      {Token, Result} = testing:receive_one(),
+	      {Count, true} = {Count, Predicate(Result)},
+	      Count + 1
+      end,
+      1,
+      [{fun successful_test_/0, fun(Result) -> Result == pass end},
+       {fun unsuccessful_test_/0, fun({fail,_}) -> true; (_) -> false end}]),
+    true = is_process_alive (Runner),
+    Runner ! stop.
+
 run_functions_test() ->
     {1,[]} = testing:run_functions([fun successful_test_/0]),
     {2,[_Reason]} = testing:run_functions([fun successful_test_/0, fun unsuccessful_test_/0]),

@@ -34,37 +34,62 @@
 default_options () ->
     [{unit_modules_filter, adlib:ends_with("ut")},
      {unit_functions_filter, adlib:ends_with("test")},
-     {report_function, fun simple_report/1}].
+     {report_function, fun simple_report/1},
+     {slave_name, slave}].
 
 test_files (Directory) ->
     test_files (Directory, default_options ()).
 
-start_slave() ->
+start_slave(Name) ->
+    io:fwrite("start_slave: ~p~n",[Name]),
     {ok, Host_name} = inet:gethostname(),
-    case slave:start (list_to_atom (Host_name), slave) of
-	{ok, Slave} -> Slave;
-	{error, {already_running, Slave}} -> Slave;
-	{error, Reason} -> exit({noslave, Reason})
+    Node =
+	case slave:start (list_to_atom (Host_name), Name) of
+	    {ok, Slave} -> Slave;
+	    {error, {already_running, Slave}} -> Slave;
+	    {error, Reason} -> exit({noslave, Reason})
+	end,
+    io:fwrite("Start slave: ~p, ~p~n",[Node, nodes()]),
+    {Node, spawn_link(Node, testing, runner, [fun({Pid,Test_id}, Message) ->io:fwrite("~p: ~p~n",[Test_id, Message]), Pid ! {Test_id, Message} end])}.
+
+slave_loop(Pending) ->
+    Slave = self(),
+    receive
+	{Owner, test, Fun} ->
+	    Pid = spawn (fun() -> Slave ! {self(), result, Fun()} end),
+	    slave_loop (dict:store (Pid, Owner, Pending));
+	{Pid, result, Result} ->
+	    dict:fetch(Pid, Pending) ! {Slave, result, Result},
+	    slave_loop (dict:erase (Pid, Pending));
+	{'EXIT', Pid, Reason} ->
+	    dict:fetch(Pid, Pending) ! {Slave, error, Reason},
+	    slave_loop (dict:erase (Pid, Pending));
+	Other ->
+	    exit({unexpected_message, slave, Other})
     end.
 
 stop_slave(Options) ->
-    {value, {slave, Node}} = lists:keysearch(slave, 1, Options),
+    {value, {slave, {Node, _}}} = lists:keysearch(slave, 1, Options),
     ok = slave:stop(Node).
 
 update_options(Options) ->
-    [{slave, start_slave()} | adlib:update_options (Options, default_options ())].
+    io:fwrite("update_options: ~p~n",[Options]),
+    Updated = adlib:update_options (Options, default_options ()),
+    {value, {slave_name, Name}} = lists:keysearch (slave_name, 1, Updated),
+    [{slave, start_slave (Name)} | Updated].
 
 test_files (Directory, Options) ->
     Dir = adlib:normalise_path (filename:absname (Directory)),
     All_options = update_options (Options),
     Unit = unit (All_options),
     Compile = compile (All_options),
+    Post = post_compile(All_options),
     Result = 
 	with (Dir,
 	      [fun find_modules/2,
 	       fun find_differences/2,
 	       Compile,
-	       fun post_compile/2,
+	       Post,
 	       fun (_Dir2, Modules) -> acceptance (All_options,Unit(Modules)) end],
 	      []),
     stop_slave(All_options),
@@ -80,20 +105,23 @@ with (Directory, [Fun|T], Acc) ->
 with (_Directory, [], Acc) ->
     Acc.
 
-post_compile (_Directory, {{compiled, Compiled}, {failed, Failed}}) ->
-    lists:foreach (
-      fun({Module,Binary}) ->
-              code:purge (Module),
-              {module, Module} = code:load_binary (Module,"",Binary)
-      end,
-      Compiled),
-    lists:foreach (
-      fun(Module) ->
-              code:purge (Module),
-              code:delete (Module)
-      end,
-      Failed),
-    {length (Compiled) + length (Failed), Compiled}.
+post_compile (Options) ->
+    {value, {slave, {Slave, _}}} = lists:keysearch (slave, 1, Options),
+    fun (_Directory, {{compiled, Compiled}, {failed, Failed}}) ->
+	    lists:foreach (
+	      fun({Module,Binary}) ->
+		      rpc:call (Slave, code, purge, [Module]),
+		      {module, Module} = rpc:call (Slave, code, load_binary, [Module,"",Binary])
+	      end,
+	      Compiled),
+	    lists:foreach (
+	      fun(Module) ->
+		      rpc:call (Slave, code, purge, [Module]),
+		      rpc:call (Slave, code, delete, [Module])
+	      end,
+	      Failed),
+	    {length (Compiled) + length (Failed), Compiled}
+    end.
 
 find_modules (Directory, _) ->
     case source:erlang_files (Directory) of
@@ -118,11 +146,13 @@ compile (Options) when is_list (Options) ->
 compile (Report_function) when is_function (Report_function) ->
     fun (Dir, Files) -> compiling:compile (Dir, Files, Report_function) end.
     
-unit (Options) when is_list (Options) ->
+unit (Options) when is_list(Options)->
     {value, {_,  Module_filter}} = lists:keysearch (unit_modules_filter, 1, Options),
     {value, {_,  Function_filter}} = lists:keysearch (unit_functions_filter, 1, Options),
     {value, {_,  Report_function}} = lists:keysearch (report_function, 1, Options),
-    unit ({Module_filter, Function_filter, Report_function});
+    {value, {_, Slave}} = lists:keysearch (slave, 1, Options),
+    unit ({Slave, Module_filter, Function_filter, Report_function});
+
 unit (Options) when is_tuple (Options) ->
     fun ({Module_count, Compiled_modules}) ->
             Work = 'work?' (Module_count, Compiled_modules),
@@ -141,22 +171,22 @@ unit_work (Options, has_work, Module_count, Compiled_modules) ->
 unit_work (_, no_work, Module_count, Compiled_modules) ->
     [{modules, Module_count, Compiled_modules}].
 
-
 acceptance (_,[{modules, Count, Compiled_modules}]) ->
     [{modules, Count, length (Compiled_modules)}];
 acceptance (_,[{unit, Total, Successes}, {modules, Count, Compiled_modules}]) when Successes < Total ->
     [{unit, Total, Successes}, {modules, Count, length (Compiled_modules)}];
 acceptance (Options,[Unit_summary, {modules, Module_total, Compiled_modules}]) ->
     {value, {_,  Report_function}} = lists:keysearch (report_function, 1, Options),
+    {value, {_, Slave}} = lists:keysearch (slave, 1, Options),
     test_pass (
-      {adlib:ends_with ("_acceptance"), adlib:ends_with ("_test"), Report_function}, 
+      {Slave, adlib:ends_with ("_acceptance"), adlib:ends_with ("_test"), Report_function}, 
       Compiled_modules, 
       acceptance, 
       [Unit_summary, {modules,Module_total,length(Compiled_modules)}]).
 
-test_pass ({Module_filter, Function_filter, Report_function}, Modules, Pass_name, Acc) ->
+test_pass ({Slave, Module_filter, Function_filter, Report_function}, Modules, Pass_name, Acc) ->
     Tests = [X || {X,_} <- Modules, Module_filter(X)],
-    Results = testing:run_modules (Tests, Function_filter),
+    Results = testing:run_modules (Slave, Tests, Function_filter),
     {Total, FailureCount, Failures}
         = lists:foldl(
             fun({Module, Count, []}, {Sum, FailureCount, FailuresAcc}) ->

@@ -87,7 +87,7 @@ silent_report(_) ->
     ok.
 
 options() ->
-    [{report_function, fun silent_report/1}].
+    [{report_function, fun silent_report/1}, {slave_name, test_slave}].
 
 wait() ->
     timer:sleep(1000).
@@ -171,7 +171,8 @@ custom_unit_filters_test() ->
     Options =
         [{unit_modules_filter, adlib:ends_with("_utt")},
          {unit_functions_filter, adlib:ends_with("_tt")},
-         {report_function, fun silent_report/1}],
+         {report_function, fun silent_report/1},
+	 {slave_name, test_slave}],
     use_and_purge_tree (
       [foo(), foo_ut(), foo_more_utt(), foo_utt()],
       fun (Dir,_) ->
@@ -320,7 +321,8 @@ continue_after_compile_error_test() ->
 
 custom_report_function_compile_error_test() ->
     Options = 
-        [{report_function, fun my_report_function/1}],
+        [{report_function, fun my_report_function/1},
+	 {slave_name, test_slave}],
     use_and_purge_tree (
       [source:module_file(foo, [{bar, ["does not compile"]}])],
       fun (Dir,_) ->
@@ -337,7 +339,8 @@ custom_report_function_compile_error_test() ->
 
 custom_report_function_compile_success_test() ->
     Options = 
-        [{report_function, fun my_report_function/1}],
+        [{report_function, fun my_report_function/1},
+	 {slave_name, test_slave}],
     use_and_purge_tree (
       [foo()],
       fun (Dir,_) ->
@@ -354,7 +357,8 @@ custom_report_function_compile_success_test() ->
 
 custom_report_function_unit_error_test() ->
     Options = 
-        [{report_function, fun my_report_function/1}],
+        [{report_function, fun my_report_function/1,
+	 {slave_name, test_slave}}],
     use_and_purge_tree (
       [source:module_file(foo_ut, [{bar_test, ["nok = foo:bar()."]}])],
       fun(Dir,_)->
@@ -373,7 +377,8 @@ custom_report_function_unit_error_test() ->
 
 custom_report_function_unit_success_test() ->
     Options = 
-        [{report_function, fun my_report_function/1}],
+        [{report_function, fun my_report_function/1},
+	 {slave_name, test_slave}],
     use_and_purge_tree (
       [foo_ut(),foo()],
       fun(Dir,_) ->
@@ -391,7 +396,8 @@ custom_report_function_unit_success_test() ->
 
 custom_report_function_acceptance_error_test() ->
     Options = 
-        [{report_function, fun my_report_function/1}],
+        [{report_function, fun my_report_function/1},
+	{slave_name, test_slave}],
     use_and_purge_tree (
       [source:module_file(foo_acceptance, [{bar_test, ["nok = ok."]}])],
       fun(Dir,_)->
@@ -410,7 +416,8 @@ custom_report_function_acceptance_error_test() ->
 
 custom_report_function_acceptance_success_test() ->
     Options = 
-        [{report_function, fun my_report_function/1}],
+        [{report_function, fun my_report_function/1},
+	 {slave_name, test_slave}],
     use_and_purge_tree (
       [one_acceptance_ok()],
       fun(Dir,_) ->

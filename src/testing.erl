@@ -30,6 +30,81 @@
 -module (testing).
 -compile (export_all).
 
+runner (Notify) ->
+    process_flag (trap_exit, true),
+    runner_loop (Notify, dict:new()).
+
+runner_loop (Notify, Workers) ->
+    receive
+	{Token, test, Test} ->
+	    Worker = spawn_link (fun() -> Test() end),
+	    runner_loop (Notify, dict:store (Worker, Token, Workers));
+	{'EXIT', Worker, normal} ->
+	    Notify (dict:fetch (Worker, Workers), pass),
+	    runner_loop (Notify, dict:erase (Worker, Workers));
+	{'EXIT', Worker, Reason} ->
+	    Notify (dict:fetch (Worker, Workers), {fail, Reason}),
+	    runner_loop (Notify, dict:erase (Worker, Workers));
+	stop ->
+	    bye;
+	Other ->
+	    throw ({unexpected_message, ?MODULE, Other, dict:to_list (Workers)})
+    end.
+
+run_modules (Slave, Modules, Pattern) ->
+%%    run_modules(Modules, Pattern).
+    lists:foldl(
+       fun(Module, Acc) ->
+	      {FunctionCount,ModuleErrors} = run_functions(Slave, select_test_functions(Module,Pattern)),
+	      [{Module, FunctionCount, ModuleErrors} | Acc]
+       end, 
+      [], 
+      Modules).
+
+run_functions ({Node, Slave}, Functions) ->
+    lists:foldl(
+      fun(Fun, {Count,Errors}) ->
+	      monitor_node (Node, true), 
+	      Slave ! {{self(), Fun}, test, Fun},
+	      receive
+		  {nodedown, Node} ->
+		      {Count + 1, [{slave_down, Fun} | Errors]};
+		  {Fun, {fail, Reason}} ->
+		      {Count + 1, [Reason | Errors]};
+		  {Fun, pass} ->
+		      {Count + 1, Errors};
+		  Other ->
+		      {Count + 1, [{unexpected_message, "waiting for remote test run", Fun, Other} | Errors]}
+	      after
+		  100000 ->
+		      {Count + 1, [{timeout, "waiting for remote test run", Fun} | Errors]}
+	      end
+
+%% 	      Master = self(),
+%% 	      Run = fun() ->
+%% 			    Result = (catch Fun()),
+%% 			    Master ! {self(), Result}
+%% 		    end,
+	      
+%% 	      Slave = spawn (, Run),
+%% 	      monitor_node (Node, true), 
+%% 	      receive
+%% 		  {nodedown, Node} ->
+%% 		      {Count + 1, [{slave_down, Fun} | Errors]};
+%% 		  {Slave, {'EXIT', Reason}} ->
+%% 		      {Count + 1, [Reason | Errors]};
+%% 		  {Slave, _Other} ->
+%% 		      {Count + 1, Errors};
+%% 		  Other ->
+%% 		      {Count + 1, [{unexpected_message, "waiting for remote test run", Fun, Other} | Errors]}
+%% 	      after
+%% 		  100000 ->
+%% 		      {Count + 1, [{timeout, "waiting for remote test run", Fun} | Errors]}
+%% 	      end
+      end,
+      {0,[]}, 
+      Functions).
+
 run_functions(Functions) when list(Functions) ->
     lists:foldl(
       fun(Fun, {Count,Errors}) ->
@@ -42,11 +117,11 @@ run_functions(Functions) when list(Functions) ->
       end, 
       {0,[]}, 
       Functions).
+
 run_modules(Modules,Pattern) when list(Modules) ->
     lists:foldl(
        fun(Module, Acc) ->
 	      {FunctionCount,ModuleErrors} = run_functions(select_test_functions(Module,Pattern)),
-%		  Results = run_functions(select_test_functions(Module,Pattern)),
 	      [{Module, FunctionCount, ModuleErrors} | Acc]
       end, 
 	  [], 

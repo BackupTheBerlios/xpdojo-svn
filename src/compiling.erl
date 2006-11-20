@@ -127,7 +127,7 @@ compile (_Dir, [], _Fun, {Compiled, Failed}) ->
     {{compiled, Compiled}, {failed, Failed}};
 compile (Dir, [File|T], Report_function, Acc) ->
     compile (Dir, T, Report_function,
-	     classify_by_result (Report_function, compile:file(File, [binary,return]), File, Acc)).
+	     classify_by_result (Report_function, compile:file(File, [debug_info,binary,return]), File, Acc)).
 
 classify_by_result (Report_function, {ok, Module, Binary,Warnings}, File, {Compiled, Failed}) ->
     Report_function ({compile, {ok, File, Warnings}}),
