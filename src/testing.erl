@@ -48,6 +48,7 @@ runner_loop (Notify, Workers) ->
 	stop ->
 	    bye;
 	Other ->
+	    io:format("Here ~p ~n",[Other]),
 	    throw ({unexpected_message, ?MODULE, Other, dict:to_list (Workers)})
     end.
 
@@ -55,7 +56,9 @@ run_modules (Slave, Modules, Pattern) ->
 %%    run_modules(Modules, Pattern).
     lists:foldl(
        fun(Module, Acc) ->
-	      {FunctionCount,ModuleErrors} = run_functions(Slave, select_test_functions(Module,Pattern)),
+	       {Node,_} = Slave,
+	       FunctionsToTest = rpc:call(Node,testing,select_test_functions,[Module,Pattern]),
+	      {FunctionCount,ModuleErrors} = run_functions(Slave,FunctionsToTest),
 	      [{Module, FunctionCount, ModuleErrors} | Acc]
        end, 
       [], 
@@ -72,9 +75,10 @@ run_functions ({Node, Slave}, Functions) ->
 		  {Fun, {fail, Reason}} ->
 		      {Count + 1, [Reason | Errors]};
 		  {Fun, pass} ->
-		      {Count + 1, Errors};
-		  Other ->
-		      {Count + 1, [{unexpected_message, "waiting for remote test run", Fun, Other} | Errors]}
+		      {Count + 1, Errors}
+%		  Other ->
+%		      io:format("Unexpected Message ~p ~n",[Other]),
+%		      {Count + 1, [{unexpected_message, "waiting for remote test run", Fun, Other} | Errors]}
 	      after
 		  100000 ->
 		      {Count + 1, [{timeout, "waiting for remote test run", Fun} | Errors]}

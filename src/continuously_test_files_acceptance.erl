@@ -357,8 +357,8 @@ custom_report_function_compile_success_test() ->
 
 custom_report_function_unit_error_test() ->
     Options = 
-        [{report_function, fun my_report_function/1,
-	 {slave_name, test_slave}}],
+        [{report_function, fun my_report_function/1},
+	 {slave_name, test_slave}],
     use_and_purge_tree (
       [source:module_file(foo_ut, [{bar_test, ["nok = foo:bar()."]}])],
       fun(Dir,_)->

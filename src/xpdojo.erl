@@ -41,7 +41,7 @@ test_files (Directory) ->
     test_files (Directory, default_options ()).
 
 start_slave(Name) ->
-    io:fwrite("start_slave: ~p~n",[Name]),
+%    io:fwrite("start_slave: ~p~n",[Name]),
     {ok, Host_name} = inet:gethostname(),
     Node =
 	case slave:start (list_to_atom (Host_name), Name) of
@@ -49,7 +49,7 @@ start_slave(Name) ->
 	    {error, {already_running, Slave}} -> Slave;
 	    {error, Reason} -> exit({noslave, Reason})
 	end,
-    io:fwrite("Start slave: ~p, ~p~n",[Node, nodes()]),
+%    io:fwrite("Start slave: ~p, ~p~n",[Node, nodes()]),
     {Node, spawn_link(Node, testing, runner, [fun({Pid,Test_id}, Message) ->io:fwrite("~p: ~p~n",[Test_id, Message]), Pid ! {Test_id, Message} end])}.
 
 slave_loop(Pending) ->
@@ -69,11 +69,13 @@ slave_loop(Pending) ->
     end.
 
 stop_slave(Options) ->
-    {value, {slave, {Node, _}}} = lists:keysearch(slave, 1, Options),
-    ok = slave:stop(Node).
+    {value, {slave, {Node, Runner}}} = lists:keysearch(slave, 1, Options),
+    io:format("Try to stop slave ~p ~n",[Node]),
+%    ok = slave:stop(Node).
+    ok.
 
 update_options(Options) ->
-    io:fwrite("update_options: ~p~n",[Options]),
+%    io:fwrite("update_options: ~p~n",[Options]),
     Updated = adlib:update_options (Options, default_options ()),
     {value, {slave_name, Name}} = lists:keysearch (slave_name, 1, Updated),
     [{slave, start_slave (Name)} | Updated].
@@ -84,10 +86,12 @@ test_files (Directory, Options) ->
     Unit = unit (All_options),
     Compile = compile (All_options),
     Post = post_compile(All_options),
+    DifferenceOnSlave = find_differences_on_slave(All_options),
     Result = 
 	with (Dir,
 	      [fun find_modules/2,
-	       fun find_differences/2,
+%	       fun find_differences/2,
+	       DifferenceOnSlave,
 	       Compile,
 	       Post,
 	       fun (_Dir2, Modules) -> acceptance (All_options,Unit(Modules)) end],
@@ -122,6 +126,20 @@ post_compile (Options) ->
 	      Failed),
 	    {length (Compiled) + length (Failed), Compiled}
     end.
+
+find_differences_on_slave(Options) ->
+    {value, {slave, {Slave, _}}} = lists:keysearch (slave, 1, Options),
+    fun (Directory, Files) ->
+	    Loaded_modules = rpc:call(Slave,compiling,loaded_modules,[Directory]),
+	    case rpc:call(Slave,compiling,differences,[Loaded_modules, Files]) of
+		[] ->
+		    {stop, unchanged};
+		_Changes ->
+		    Files
+	    end
+    end.
+
+    
 
 find_modules (Directory, _) ->
     case source:erlang_files (Directory) of
