@@ -41,7 +41,6 @@ test_files (Directory) ->
     test_files (Directory, default_options ()).
 
 start_slave(Name) ->
-%    io:fwrite("start_slave: ~p~n",[Name]),
     {ok, Host_name} = inet:gethostname(),
     Node =
 	case slave:start (list_to_atom (Host_name), Name) of
@@ -49,33 +48,15 @@ start_slave(Name) ->
 	    {error, {already_running, Slave}} -> Slave;
 	    {error, Reason} -> exit({noslave, Reason})
 	end,
-%    io:fwrite("Start slave: ~p, ~p~n",[Node, nodes()]),
     {Node, spawn_link(Node, testing, runner, [fun({Pid,Test_id}, Message) ->io:fwrite("~p: ~p~n",[Test_id, Message]), Pid ! {Test_id, Message} end])}.
 
-slave_loop(Pending) ->
-    Slave = self(),
-    receive
-	{Owner, test, Fun} ->
-	    Pid = spawn (fun() -> Slave ! {self(), result, Fun()} end),
-	    slave_loop (dict:store (Pid, Owner, Pending));
-	{Pid, result, Result} ->
-	    dict:fetch(Pid, Pending) ! {Slave, result, Result},
-	    slave_loop (dict:erase (Pid, Pending));
-	{'EXIT', Pid, Reason} ->
-	    dict:fetch(Pid, Pending) ! {Slave, error, Reason},
-	    slave_loop (dict:erase (Pid, Pending));
-	Other ->
-	    exit({unexpected_message, slave, Other})
-    end.
-
 stop_slave(Options) ->
-    {value, {slave, {Node, Runner}}} = lists:keysearch(slave, 1, Options),
+    {value, {slave, {Node, _}}} = lists:keysearch(slave, 1, Options),
     io:format("Try to stop slave ~p ~n",[Node]),
 %    ok = slave:stop(Node).
     ok.
 
 update_options(Options) ->
-%    io:fwrite("update_options: ~p~n",[Options]),
     Updated = adlib:update_options (Options, default_options ()),
     {value, {slave_name, Name}} = lists:keysearch (slave_name, 1, Updated),
     [{slave, start_slave (Name)} | Updated].
@@ -90,7 +71,6 @@ test_files (Directory, Options) ->
     Result = 
 	with (Dir,
 	      [fun find_modules/2,
-%	       fun find_differences/2,
 	       DifferenceOnSlave,
 	       Compile,
 	       Post,
@@ -139,22 +119,11 @@ find_differences_on_slave(Options) ->
 	    end
     end.
 
-    
-
 find_modules (Directory, _) ->
     case source:erlang_files (Directory) of
         [] ->
             {stop, no_source_files};
         Files ->
-            Files
-    end.
-
-find_differences (Directory, Files) ->
-    Loaded_modules = compiling:loaded_modules (Directory),
-    case compiling:differences (Loaded_modules, Files) of
-        [] ->
-            {stop, unchanged};
-        _Changes ->
             Files
     end.
 

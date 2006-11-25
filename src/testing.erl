@@ -53,13 +53,12 @@ runner_loop (Notify, Workers) ->
     end.
 
 run_modules (Slave, Modules, Pattern) ->
-%%    run_modules(Modules, Pattern).
     lists:foldl(
        fun(Module, Acc) ->
 	       {Node,_} = Slave,
 	       FunctionsToTest = rpc:call(Node,testing,select_test_functions,[Module,Pattern]),
-	      {FunctionCount,ModuleErrors} = run_functions(Slave,FunctionsToTest),
-	      [{Module, FunctionCount, ModuleErrors} | Acc]
+	       {FunctionCount,ModuleErrors} = run_functions(Slave,FunctionsToTest),
+	       [{Module, FunctionCount, ModuleErrors} | Acc]
        end, 
       [], 
       Modules).
@@ -76,35 +75,10 @@ run_functions ({Node, Slave}, Functions) ->
 		      {Count + 1, [Reason | Errors]};
 		  {Fun, pass} ->
 		      {Count + 1, Errors}
-%		  Other ->
-%		      io:format("Unexpected Message ~p ~n",[Other]),
-%		      {Count + 1, [{unexpected_message, "waiting for remote test run", Fun, Other} | Errors]}
 	      after
 		  100000 ->
 		      {Count + 1, [{timeout, "waiting for remote test run", Fun} | Errors]}
 	      end
-
-%% 	      Master = self(),
-%% 	      Run = fun() ->
-%% 			    Result = (catch Fun()),
-%% 			    Master ! {self(), Result}
-%% 		    end,
-	      
-%% 	      Slave = spawn (, Run),
-%% 	      monitor_node (Node, true), 
-%% 	      receive
-%% 		  {nodedown, Node} ->
-%% 		      {Count + 1, [{slave_down, Fun} | Errors]};
-%% 		  {Slave, {'EXIT', Reason}} ->
-%% 		      {Count + 1, [Reason | Errors]};
-%% 		  {Slave, _Other} ->
-%% 		      {Count + 1, Errors};
-%% 		  Other ->
-%% 		      {Count + 1, [{unexpected_message, "waiting for remote test run", Fun, Other} | Errors]}
-%% 	      after
-%% 		  100000 ->
-%% 		      {Count + 1, [{timeout, "waiting for remote test run", Fun} | Errors]}
-%% 	      end
       end,
       {0,[]}, 
       Functions).
