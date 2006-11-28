@@ -30,27 +30,37 @@
 -module (testing).
 -compile (export_all).
 
-runner (Notify) ->
+runner (Node, Notify) ->
     process_flag (trap_exit, true),
-    runner_loop (Notify, dict:new()).
+    runner_loop (Node, Notify, dict:new()).
 
-runner_loop (Notify, Workers) ->
+runner_loop (Node, Notify, Workers) ->
     receive
 	{Token, test, Test} ->
-	    Worker = spawn_link (fun() -> Test() end),
-	    runner_loop (Notify, dict:store (Worker, Token, Workers));
+	    Worker = spawn_link (Node, fun() -> Test() end),
+%	    io:fwrite("Spawned worker ~p for ~p on node ~p~n",[Worker, Test, Node]),
+	    runner_loop (Node, Notify, dict:store (Worker, Token, Workers));
 	{'EXIT', Worker, normal} ->
-	    Notify (dict:fetch (Worker, Workers), pass),
-	    runner_loop (Notify, dict:erase (Worker, Workers));
+	    Token = dict:find(Worker, Workers),
+	    handle_exit(Token, Notify, pass, Worker, Workers, Node);
 	{'EXIT', Worker, Reason} ->
-	    Notify (dict:fetch (Worker, Workers), {fail, Reason}),
-	    runner_loop (Notify, dict:erase (Worker, Workers));
+	    Token = dict:find(Worker, Workers),
+	    handle_exit(Token, Notify, {fail, Reason}, Worker, Workers, Node);
 	stop ->
+	    io:fwrite("~p ~p received stop~n", [node(), self()]),
 	    bye;
 	Other ->
-	    io:format("Here ~p ~n",[Other]),
+	    io:fwrite("~p ~p received Other: ~p~n", [node(), self(), Other]),
 	    throw ({unexpected_message, ?MODULE, Other, dict:to_list (Workers)})
     end.
+
+handle_exit({ok, Token}, Notify, Message, Worker, Workers, Node) ->
+%    io:fwrite("~p ~p received exit (~p) from ~p~n", [node(), self(), Message, Worker]),
+    Notify(Token, Message),
+    runner_loop(Node, Notify, dict:erase(Worker, Workers));
+handle_exit(error, Notify, Message, Worker, Workers, Node) ->
+    io:fwrite("~p ~p ignoring exit (~p) from ~p~n", [node(), self(), Message, Worker]),
+    runner_loop(Node, Notify, Workers).
 
 run_modules (Slave, Modules, Pattern) ->
     lists:foldl(

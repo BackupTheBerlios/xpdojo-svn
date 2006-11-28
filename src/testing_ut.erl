@@ -35,7 +35,7 @@
 runner_test() ->
     Self = self(),
     Notify = fun(Token, Message) -> Self ! {Token, Message} end,
-    Runner = spawn(testing, runner, [Notify]),
+    Runner = spawn(testing, runner, [node(), Notify]),
     lists:foldl(
       fun({Fun, Predicate}, Count) ->
 	      Token = make_ref (),

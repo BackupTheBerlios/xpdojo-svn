@@ -48,13 +48,13 @@ start_slave(Name) ->
 	    {error, {already_running, Slave}} -> Slave;
 	    {error, Reason} -> exit({noslave, Reason})
 	end,
-    {Node, spawn_link(Node, testing, runner, [fun({Pid,Test_id}, Message) ->io:fwrite("~p: ~p~n",[Test_id, Message]), Pid ! {Test_id, Message} end])}.
+    Notify = fun({Pid,Test_id}, Message) -> Pid ! {Test_id, Message} end,
+    Process = spawn_link(testing, runner, [Node, Notify]),
+    {Node, Process}.
 
 stop_slave(Options) ->
     {value, {slave, {Node, _}}} = lists:keysearch(slave, 1, Options),
-    io:format("Try to stop slave ~p ~n",[Node]),
-%    ok = slave:stop(Node).
-    ok.
+    ok = slave:stop(Node).
 
 update_options(Options) ->
     Updated = adlib:update_options (Options, default_options ()),
