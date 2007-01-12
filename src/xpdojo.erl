@@ -49,7 +49,7 @@ start_slave(Name) ->
 	    {error, Reason} -> exit({noslave, Reason})
 	end,
     Notify = fun({Pid,Test_id}, Message) -> Pid ! {Test_id, Message} end,
-    Process = spawn_link(testing, runner, [Node, Notify]),
+    Process = spawn (testing, runner, [Node, Notify]),
     {Node, Process}.
 
 stop_slave(Options) ->

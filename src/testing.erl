@@ -37,15 +37,14 @@ runner (Node, Notify) ->
 runner_loop (Node, Notify, Workers) ->
     receive
 	{Token, test, Test} ->
-	    Worker = spawn_link (Node, fun() -> Test() end),
-%	    io:fwrite("Spawned worker ~p for ~p on node ~p~n",[Worker, Test, Node]),
+	    Worker = spawn(Node, fun() -> receive start -> Test() end end),
+	    erlang:monitor (process, Worker),
+	    Worker ! start,
 	    runner_loop (Node, Notify, dict:store (Worker, Token, Workers));
-	{'EXIT', Worker, normal} ->
-	    Token = dict:find(Worker, Workers),
-	    handle_exit(Token, Notify, pass, Worker, Workers, Node);
-	{'EXIT', Worker, Reason} ->
-	    Token = dict:find(Worker, Workers),
-	    handle_exit(Token, Notify, {fail, Reason}, Worker, Workers, Node);
+	{'DOWN', _, process, Worker, normal} ->
+	    handle (Notify, pass, Worker, Workers, Node);
+	{'DOWN', _, process, Worker, Reason} ->
+	    handle (Notify, {fail, Reason}, Worker, Workers, Node);
 	stop ->
 	    io:fwrite("~p ~p received stop~n", [node(), self()]),
 	    bye;
@@ -54,13 +53,9 @@ runner_loop (Node, Notify, Workers) ->
 	    throw ({unexpected_message, ?MODULE, Other, dict:to_list (Workers)})
     end.
 
-handle_exit({ok, Token}, Notify, Message, Worker, Workers, Node) ->
-%    io:fwrite("~p ~p received exit (~p) from ~p~n", [node(), self(), Message, Worker]),
-    Notify(Token, Message),
-    runner_loop(Node, Notify, dict:erase(Worker, Workers));
-handle_exit(error, Notify, Message, Worker, Workers, Node) ->
-    io:fwrite("~p ~p ignoring exit (~p) from ~p~n", [node(), self(), Message, Worker]),
-    runner_loop(Node, Notify, Workers).
+handle (Notify, Message, Worker, Workers, Node) ->
+    Notify (dict:fetch (Worker, Workers), Message),
+    runner_loop (Node, Notify, dict:erase (Worker, Workers)).
 
 run_modules (Slave, Modules, Pattern) ->
     lists:foldl(
