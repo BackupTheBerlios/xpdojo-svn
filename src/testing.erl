@@ -60,8 +60,7 @@ handle (Notify, Message, Worker, Workers, Node) ->
 run_modules (Slave, Modules, Pattern) ->
     lists:foldl(
        fun(Module, Acc) ->
-	       {Node,_} = Slave,
-	       FunctionsToTest = rpc:call(Node,testing,select_test_functions,[Module,Pattern]),
+	       FunctionsToTest = select_test_functions(Slave, Module, Pattern),
 	       {FunctionCount,ModuleErrors} = run_functions(Slave,FunctionsToTest),
 	       [{Module, FunctionCount, ModuleErrors} | Acc]
        end, 
@@ -71,7 +70,6 @@ run_modules (Slave, Modules, Pattern) ->
 run_functions ({Node, Slave}, Functions) ->
     lists:foldl(
       fun(Fun, {Count,Errors}) ->
-	      monitor_node (Node, true), 
 	      Slave ! {{self(), Fun}, test, Fun},
 	      receive
 		  {nodedown, Node} ->
@@ -112,6 +110,9 @@ run_modules(Modules,Pattern) when list(Modules) ->
 
 select_test_functions(Module,Pattern) when atom(Module), function(Pattern) ->
     [{Module,X} || {X,Y} <- Module:module_info(exports), Pattern(X), Y == 0].
+
+select_test_functions ({Node,_}, Module, Pattern) when atom (Module), function (Pattern) ->
+    [{Module, X} || {X, Y} <- rpc:call (Node, Module, module_info, [exports]), Pattern(X), Y == 0].
 
 use_and_purge_tree (Tree, Fun) ->
     adlib:use_tree (
