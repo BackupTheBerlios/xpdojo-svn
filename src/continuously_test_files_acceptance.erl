@@ -224,30 +224,6 @@ add_module_to_directory_test() ->
               [{acceptance,0,0}, {unit,1,1}, {modules,3,3}] = xpdojo:test_files (Dir, options())
       end).
 
-unchanged_test() ->
-    use_and_purge_tree (
-      [foo_acceptance(),
-       {directory,"src",[foo(),bar()]},
-       {directory,"unit",[foo_ut(), bar_ut()]}],
-      fun (Dir,_) ->
-              [{acceptance,1,0}, {unit,2,2}, {modules,5,5}] = xpdojo:test_files (Dir, options()),
-              unchanged = xpdojo:test_files (Dir, options())
-      end).
-
-unchanged_for_relative_test() ->
-    use_and_purge_tree (
-      [foo_acceptance(),
-       {directory,"src",[foo(),bar()]},
-       {directory,"unit",[foo_ut(), bar_ut()]}],
-      fun (Dir,_) ->
-              {ok, Current} = file:get_cwd(),
-              Relative = filename:basename (Dir),
-              file:set_cwd(filename:dirname(Dir)),
-              [{acceptance,1,0}, {unit,2,2}, {modules,5,5}] = xpdojo:test_files (Relative, options()),
-              unchanged = xpdojo:test_files (Relative, options()),
-              ok = file:set_cwd(Current)
-      end).
-
 continuous_tester_test() ->
     use_and_purge_tree (
       [foo(), foo_ut()],
