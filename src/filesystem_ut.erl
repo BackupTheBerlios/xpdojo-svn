@@ -30,13 +30,16 @@
 -compile(export_all).
 -import(testing, [use_and_purge_tree/2, receive_one/0]).
 
+tree() ->
+    [{file, "toto", ["Hello"]},
+     {directory, "tmp", [{file, "intmp", []}]},
+     {file, "other.xml", ["<a>coucou</a>"]}].
+    
 commands_test() ->
     lists:foreach (
       fun (Test) ->
 	      use_and_purge_tree (
-		[{file, "toto", []},
-		 {directory, "tmp", [{file, "intmp", []}]},
-		 {file, "other.xml", []}],
+		tree(),
 		fun (Dir, _) ->
 			Previous_processes = processes(),
 			Pid = filesystem:serve (
@@ -93,7 +96,22 @@ modification_time (Before) ->
 	    After = erlang:localtime (),
 	    {2, Time, After, true} = {2, Time, After, Time =< After}
     end.
-    
+
+content_test () ->
+    use_and_purge_tree (
+      tree (),
+      fun (Dir, _) ->
+	      Hello_file = filename:join (Dir, "toto"),
+	      XML_file = filename:join (Dir, "other.xml"),
+	      filesystem:serve(
+		fun(F) ->
+			F ! {self(), Hello_file, [content]},
+			{F, Hello_file, [{content, "Hello"}]} = receive_one(),
+			F ! {self(), XML_file, [content]},
+			{F, XML_file, [{content, "<a>coucou</a>"}]} = receive_one()
+		end)
+      end).
+
 multiple_requests (File_system, Dir) ->
     Filename = filename:join (Dir, "toto"),
     File_system ! {self(), Filename, [type, modification_time]},
@@ -135,10 +153,17 @@ serve_a_crashing_client_test () ->
 fake_file_system (Instructions) ->
     receive
 	{Client, Path, [Command]} ->
-	    Client ! {self(), Path, [{Command, dict:fetch ({Path, Command}, Instructions)}]},
+	    case dict:find ({Path, Command}, Instructions) of
+		{ok, Result} ->
+		    Client ! {self(), Path, [{Command, Result}]};
+		error ->
+		    Client ! {self(), Path, [{Command, fake_has_no_instructions}]}
+	    end,
 	    fake_file_system (Instructions);
 	stop ->
-	    bye
+	    bye;
+	Other ->
+	    io:fwrite("fake_file_system received: ~p~n",[Other])
     end.
 
 time1() ->
@@ -158,7 +183,7 @@ fake_tree () ->
 list_recursively_enoent_test() ->
     Instructions =
 	[{{"/tmp", directory_content}, {error, enoent}}],
-    F = spawn (?MODULE, fake_file_system, [dict:from_list (Instructions)]),
+    F = spawn_link (?MODULE, fake_file_system, [dict:from_list (Instructions)]),
     {error, enoent} = filesystem:list_recursively (F, "/tmp"),
     F ! stop.
     

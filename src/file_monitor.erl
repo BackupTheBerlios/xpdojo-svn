@@ -27,46 +27,52 @@
 %%% POSSIBILITY OF SUCH DAMAGE.
 
 -module(file_monitor).
--export([start/2, stop/1, loop/3]).
+-export([start/3, stop/1, loop/4, bind_content/1]).
 -include_lib("kernel/include/file.hrl").
 
-start (Directory, Notify) ->
-    spawn (?MODULE, loop, [filename:absname(Directory), Notify, []]).
+start (Filesystem, Directory, Notify) ->
+    spawn (?MODULE, loop, [Filesystem, filename:absname(Directory), Notify, []]).
 
-loop (Directory, Notify, Tree) ->
-    case filesystem:serve (
-	   fun(F) ->
-		   filesystem:list_recursively (F, Directory, [type, modification_time])
-	   end) of
+loop (Filesystem, Directory, Notify, Tree) ->
+    case filesystem:list_recursively (Filesystem, Directory, [type, modification_time])  of
 	{error, enoent} ->
-	    Notify (nonexistent, Directory);
+	    Notify (nonexistent, Directory, Filesystem);
 	List when is_list(List) ->
 	    NewTree = 
 		[{Item, Time} || {Item, Type, Time} <- List, Type == regular],
-	    report (directory_tree:changes (Tree, NewTree), Notify),
+	    report (directory_tree:changes (Tree, NewTree), Notify, Filesystem),
 	    receive
 		stop ->
 		    bye
 	    after
-		0 ->
-		    loop (Directory, Notify, NewTree)
+		500 ->
+		    loop (Filesystem, Directory, Notify, NewTree)
 	    end
     end.
 
-report (Changes, Notify) when is_list (Changes) ->
+report (Changes, Notify, Filesystem) when is_list (Changes) ->
     lists:foreach (
       fun (Event) ->
-	      report_event (Event, Notify)
+	      report_event (Event, Notify, Filesystem)
       end,
       Changes).
 
-report_event ({Event, Files}, Notify) ->
+report_event ({Event, Files}, Notify, Filesystem) ->
     lists:foreach (
       fun (File) ->
-	      Notify(Event, File)
+	      Notify(Event, File, Filesystem)
       end,
       Files).
 
 stop (Pid) ->
     Pid ! stop.
 		   
+bind_content(Fun) ->
+    fun(Event, Filename, Filesystem) when Event == found; Event == modified ->
+	    Filesystem ! {self(), Filename, [content]},
+	    receive {Filesystem, Filename, [{content, Content}]} ->
+		    Fun ({Event, Content}, Filename, Filesystem)
+	    end;
+       (Event, Filename, Filesystem) ->
+	    Fun(Event, Filename, Filesystem)
+    end.

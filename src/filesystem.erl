@@ -29,6 +29,7 @@
 -module (filesystem).
 -export ([start/0, worker_loop/1, serve/1]).
 -export ([directory_content/1, type/1, modification_time/1]).
+-export ([content/1]).
 -export ([list_recursively/2, list_recursively/3]).
 -include_lib ("kernel/include/file.hrl").
 
@@ -114,19 +115,31 @@ modification_time (Path) ->
 	    Other
     end.
 
+content (Path) ->
+    {ok, Binary} = file:read_file (Path),
+    binary_to_list (Binary).
+
 list_recursively (F, R) ->
     list_recursively (F, R, []).
 
 list_recursively (File_system, Root, Options) ->
-    File_system ! {self(), Root, [directory_content]},
-    list_recursively_loop ([], 1, Options).
+    Caller = self(),
+    Worker =
+	spawn_link (
+	  fun() ->
+		  File_system ! {self(), Root, [directory_content]},
+		  list_recursively_loop ([], 1, Options, Caller)
+	  end),
+    receive {Worker, List} ->
+	    List
+    end.
 
-list_recursively_loop (Acc, 0, _) ->
-    Acc;
-list_recursively_loop (Acc, Pending, Options) ->
+list_recursively_loop (Acc, 0, _, Caller) ->
+    Caller ! {self(), Acc};
+list_recursively_loop (Acc, Pending, Options, Caller) ->
     receive
 	{_, _, [{directory_content, {error, Reason}}]} ->
-	    {error, Reason};
+	    Caller ! {self(), {error, Reason}};
 	{File_system, Path, [{directory_content, Content}]} ->
 	    Message_count = lists:foldl (
 	      fun (Entry, Count) -> 
@@ -135,20 +148,20 @@ list_recursively_loop (Acc, Pending, Options) ->
 	      end,
 	      0,
 	      Content),
-	    list_recursively_loop (Acc, Pending -1 + Message_count, Options);
+	    list_recursively_loop (Acc, Pending -1 + Message_count, Options, Caller);
 	{_, Path, [{type, regular} | Option_results]} ->
-	    list_recursively_loop ([pack (Path, Option_results) | Acc], Pending - 1, Options);
+	    list_recursively_loop ([pack (Path, Option_results) | Acc], Pending - 1, Options, Caller);
 	{File_system, Path, [{type, directory} | Option_results]} ->
 	    File_system ! {self(), Path, [directory_content]},
-	    list_recursively_loop ([pack (Path, Option_results) | Acc], Pending, Options);
+	    list_recursively_loop ([pack (Path, Option_results) | Acc], Pending, Options, Caller);
 	{_, _, {error, _}} ->
-	    list_recursively_loop (Acc, Pending - 1, Options);
+	    list_recursively_loop (Acc, Pending - 1, Options, Caller);
 	{_, _, [{type, {error, _}} | _]} ->
-	    list_recursively_loop (Acc, Pending - 1, Options);
+	    list_recursively_loop (Acc, Pending - 1, Options, Caller);
 	Other ->
-	    {unexpected_message, Other, Acc}
+	    Caller ! {self(), {unexpected_message, Other, Acc}}
     after 2000 ->
-	    {timeout, Acc}
+	    Caller ! {self(), {timeout, Acc}}
     end.
 
 pack (Path, []) ->

@@ -30,22 +30,31 @@
 -module(file_monitor_acceptance).
 -compile(export_all).
 -import(testing,
-	[use_and_purge_tree/2,
-	 receive_one_from/1,
+	[receive_one_from/1,
 	 purge_messages/1]).
+
+use_and_purge_tree(Tree, Fun) ->
+    testing:use_and_purge_tree(
+      Tree,
+      fun(Dir, _) ->
+	      filesystem:serve(
+		fun(F) ->
+			Fun(Dir, F)
+		end)
+      end).
 
 notify() ->
     Self = self(),
-    fun(Event, File_name) ->
+    fun(Event, File_name, _) ->
 	    Self ! {self(), {Event, File_name}}
     end.
 
 missing_directory_test() ->
     use_and_purge_tree(
       [],
-      fun (Dir, _) ->
+      fun (Dir, F) ->
 	      File_name = filename:join(Dir,"nonexistent"),
-	      Pid = file_monitor:start (File_name, notify()),
+	      Pid = file_monitor:start (F, File_name, notify()),
 	      {nonexistent, File_name} = receive_one_from (Pid),
 	      timeout = receive_one_from (Pid),
 	      false = is_process_alive (Pid)
@@ -54,9 +63,9 @@ missing_directory_test() ->
 single_directory_test() ->
     use_and_purge_tree (
       [{directory,"foo",[]}],
-      fun(Dir,_) ->
+      fun (Dir, F) ->
 	      Directory = filename:join (Dir, "foo"),
-	      Pid = file_monitor:start (Directory, notify()),
+	      Pid = file_monitor:start (F, Directory, notify()),
 	      timeout = receive_one_from (Pid),
 	      File_name = filename:join (Directory, "foo.txt"),
 	      file:write_file(File_name,"Hello"),
@@ -75,8 +84,8 @@ complex_test() ->
     use_and_purge_tree (
       [{file, "f1", ""},
        {directory, "d1", [{file, "d1f1", ""}]}],
-      fun (Dir, _) ->
-	      Pid = file_monitor:start (Dir, notify()),
+      fun (Dir, F) ->
+	      Pid = file_monitor:start (F, Dir, notify()),
 	      F1 = filename:join (Dir, "f1"),
 	      {found, F1} = receive_one_from(Pid),
 	      D1F1 = filename:join ([Dir, "d1", "d1f1"]),
@@ -90,8 +99,8 @@ stop_test() ->
     use_and_purge_tree (
       [{file, "f1", ""},
        {directory, "d1", [{file, "d1f1", ""}]}],
-      fun (Dir, _) ->
-	      Pid = file_monitor:start (Dir, notify()),
+      fun (Dir,  F) ->
+	      Pid = file_monitor:start (F, Dir, notify()),
 	      purge_messages(5000),
 	      file_monitor:stop(Pid),
 	      timer:sleep(1000),
@@ -105,9 +114,9 @@ stop_test() ->
 revival_test() ->
     use_and_purge_tree (	      
       [{file,"myfile.txt","Hello"}],
-      fun (Dir, _) ->
+      fun (Dir, F) ->
 	      File_name = filename:join (Dir, "myfile.txt"),
-	      Pid = file_monitor:start (Dir, notify()),
+	      Pid = file_monitor:start (F, Dir, notify()),
 	      {found, File_name} = receive_one_from(Pid),
 	      file:delete (File_name),
 	      {deleted, File_name} = receive_one_from(Pid),
@@ -120,9 +129,10 @@ crash_test() ->
     use_and_purge_tree (
       [{file, "f1", ""},
        {directory, "d1", [{file, "d1f1", ""}]}],
-      fun (Dir, _) ->
+      fun (Dir, F) ->
+	      io:fwrite("crash test: ~p~n",[F]),
 	      Previous_processes = processes(),
-	      Pid = file_monitor:start (Dir, notify()),
+	      Pid = file_monitor:start (F, Dir, notify()),
 	      purge_messages(5000),
 	      exit (Pid, kill),
 	      timer:sleep(1000),
@@ -134,10 +144,10 @@ directory_change_test() ->
     use_and_purge_tree (
       [{file, "f1", ""},
        {directory, "d1", [{file, "d1f1", ""}]}],
-      fun (Dir, _) ->
+      fun (Dir, F) ->
 	      {ok,Cwd} = file:get_cwd(),
 	      file:set_cwd(Dir),
-	      Pid = file_monitor:start (".", notify()),
+	      Pid = file_monitor:start (F, ".", notify()),
 	      purge_messages(5000),
 	      file:set_cwd("/"),
 	      timer:sleep(3000),
@@ -146,3 +156,26 @@ directory_change_test() ->
 	      file:set_cwd(Cwd)
       end).
 
+modified_test() ->
+    modified_test(notify(), found, modified).
+
+with_content_test() ->
+    modified_test(
+      file_monitor:bind_content(notify()),
+      {found, "Hello"},
+      {modified, "Goodbye"}).
+
+modified_test(Notify, Found, Modified) ->
+    use_and_purge_tree (
+      [{directory,"foo",[]}],
+      fun (Dir, F) ->
+	      Pid = file_monitor:start (F, Dir, Notify),
+	      File_name = filename:join ([Dir, "foo", "foo.txt"]),
+	      file:write_file (File_name,"Hello"),
+	      {1, {Found, File_name}} = {1, receive_one_from (Pid)},
+	      file:write_file (File_name,"Goodbye"),
+	      {2, {Modified, File_name}} = {2, receive_one_from (Pid)},
+	      ok = file:delete (File_name),
+	      {3, {deleted, File_name}} = {3, receive_one_from(Pid)},
+	      file_monitor:stop(Pid)
+      end).
