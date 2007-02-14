@@ -157,25 +157,34 @@ directory_change_test() ->
       end).
 
 modified_test() ->
-    modified_test(notify(), found, modified).
-
-with_content_test() ->
-    modified_test(
-      file_monitor:bind_content(notify()),
-      {found, "Hello"},
-      {modified, "Goodbye"}).
-
-modified_test(Notify, Found, Modified) ->
     use_and_purge_tree (
       [{directory,"foo",[]}],
       fun (Dir, F) ->
-	      Pid = file_monitor:start (F, Dir, Notify),
+	      Pid = file_monitor:start (F, Dir, notify()),
 	      File_name = filename:join ([Dir, "foo", "foo.txt"]),
 	      file:write_file (File_name,"Hello"),
-	      {1, {Found, File_name}} = {1, receive_one_from (Pid)},
+	      {1, {found, File_name}} = {1, receive_one_from (Pid)},
+	      timer:sleep(1000),
 	      file:write_file (File_name,"Goodbye"),
-	      {2, {Modified, File_name}} = {2, receive_one_from (Pid)},
+	      {2, {modified, File_name}} = {2, receive_one_from (Pid)},
 	      ok = file:delete (File_name),
 	      {3, {deleted, File_name}} = {3, receive_one_from(Pid)},
 	      file_monitor:stop(Pid)
       end).
+
+with_content_test() ->
+    use_and_purge_tree (
+      [{directory,"foo",[]}],
+      fun (Dir, F) ->
+	      Pid = file_monitor:start (F, Dir, file_monitor:bind_content(notify())),
+	      File_name = filename:join ([Dir, "foo", "foo.txt"]),
+	      file:write_file (File_name,"Hello"),
+	      {1, {{found, "Hello"},File_name}} = {1, receive_one_from (Pid)},
+	      timer:sleep(1000),
+	      file:write_file (File_name,"Goodbye"),
+	      {2, {{modified, "Goodbye"}, File_name}} = {2, receive_one_from (Pid)},
+	      ok = file:delete (File_name),
+	      {3, {deleted, File_name}} = {3, receive_one_from(Pid)},
+	      file_monitor:stop(Pid)
+      end).
+
