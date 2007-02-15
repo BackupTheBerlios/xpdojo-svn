@@ -91,8 +91,7 @@ complex_test() ->
 	      D1F1 = filename:join ([Dir, "d1", "d1f1"]),
 	      {found, D1F1} = receive_one_from(Pid),
 	      timeout = receive_one_from(Pid),
-	      file_monitor:stop(Pid),
-	      timer:sleep(1000)
+	      file_monitor:stop(Pid)
       end).
 
 stop_test() ->
@@ -164,7 +163,6 @@ modified_test() ->
 	      File_name = filename:join ([Dir, "foo", "foo.txt"]),
 	      file:write_file (File_name,"Hello"),
 	      {1, {found, File_name}} = {1, receive_one_from (Pid)},
-	      timer:sleep(1000),
 	      file:write_file (File_name,"Goodbye"),
 	      {2, {modified, File_name}} = {2, receive_one_from (Pid)},
 	      ok = file:delete (File_name),
@@ -180,7 +178,6 @@ with_content_test() ->
 	      File_name = filename:join ([Dir, "foo", "foo.txt"]),
 	      file:write_file (File_name,"Hello"),
 	      {1, {{found, "Hello"},File_name}} = {1, receive_one_from (Pid)},
-	      timer:sleep(1000),
 	      file:write_file (File_name,"Goodbye"),
 	      {2, {{modified, "Goodbye"}, File_name}} = {2, receive_one_from (Pid)},
 	      ok = file:delete (File_name),

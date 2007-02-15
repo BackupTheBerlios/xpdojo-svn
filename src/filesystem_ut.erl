@@ -59,7 +59,8 @@ commands_test() ->
        fun directory_content/2,
        fun enotdir/2,
        fun multiple_requests/2,
-       modification_time (erlang:localtime ())]).
+       modification_time (erlang:localtime ()),
+       fun md5/2]).
 
 directory_type (Filesystem, Dir) ->
     Filesystem ! {self(), Dir, [type]},
@@ -81,6 +82,12 @@ directory_content (Filesystem, Dir) ->
     {Filesystem, Dir,
      [{directory_content, List}]} = receive_one (),
     same_elements = adlib:compare (["other.xml", "tmp", "toto"], List).
+
+md5 (Filesystem, Dir) ->
+    Filename = filename:join (Dir, "toto"),
+    Filesystem ! {self(), Filename, [md5]},
+    {Filesystem, Filename,
+     [{md5, <<139,26,153,83,196,97,18,150,168,39,171,248,196,120,4,215>>}]}  = receive_one ().
 
 enotdir (Filesystem, Dir) ->
     Filename = filename:join (Dir, "toto"),

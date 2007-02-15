@@ -34,7 +34,7 @@ start (Filesystem, Directory, Notify) ->
     spawn (?MODULE, loop, [Filesystem, filename:absname(Directory), Notify, []]).
 
 loop (Filesystem, Directory, Notify, Tree) ->
-    case filesystem:list_recursively (Filesystem, Directory, [type, modification_time])  of
+    case filesystem:list_recursively (Filesystem, Directory, [type, md5])  of
 	{error, enoent} ->
 	    Notify (nonexistent, Directory, Filesystem);
 	List when is_list(List) ->

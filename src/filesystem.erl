@@ -29,7 +29,7 @@
 -module (filesystem).
 -export ([start/0, worker_loop/1, serve/1]).
 -export ([directory_content/1, type/1, modification_time/1]).
--export ([content/1]).
+-export ([content/1,md5/1]).
 -export ([list_recursively/2, list_recursively/3]).
 -include_lib ("kernel/include/file.hrl").
 
@@ -114,6 +114,15 @@ modification_time (Path) ->
 	Other ->
 	    Other
     end.
+
+md5 (Path) ->
+    case type(Path) of
+	regular ->
+	    erlang:md5(content(Path));
+	_ ->
+	    []
+    end.
+    
 
 content (Path) ->
     {ok, Binary} = file:read_file (Path),
