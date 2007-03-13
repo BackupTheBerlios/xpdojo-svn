@@ -1,5 +1,4 @@
-%%% Copyright (c) 2004-2005 Dominic Williams, Nicolas Charpentier,
-%%% Fabrice Nourisson, Jacques Couvreur, Virgile Delecolle.
+%%% Copyright (c) 2004-2007 Dominic Williams, Nicolas Charpentier
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -34,14 +33,7 @@
 	 purge_messages/1]).
 
 use_and_purge_tree(Tree, Fun) ->
-    testing:use_and_purge_tree(
-      Tree,
-      fun(Dir, _) ->
-	      filesystem:serve(
-		fun(F) ->
-			Fun(Dir, F)
-		end)
-      end).
+    testing:use_and_purge_tree_with_file_system(Tree, Fun).
 
 notify() ->
     Self = self(),

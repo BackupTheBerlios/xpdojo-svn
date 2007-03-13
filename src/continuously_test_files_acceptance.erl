@@ -29,7 +29,7 @@
 
 -module(continuously_test_files_acceptance).
 -compile(export_all).
--import(testing, [use_and_purge_tree/2]).
+-import(testing, [receive_one_from/1, use_and_purge_tree/2, use_and_purge_tree_with_file_system/2]).
 
 foo() ->
     {file,"foo.erl",
@@ -116,12 +116,32 @@ tree_without_code_test() ->
               no_source_files = xpdojo:test_files (Dir, options())
       end).
 
-single_module_test() ->
-    use_and_purge_tree (
+single_module_test () ->
+    use_and_purge_tree_with_file_system (
       [foo()],
-      fun (Dir,_) ->
-              [{acceptance,0,0}, {unit,0,0}, {modules,1,1}] = xpdojo:test_files (Dir, options())
-      end).
+       fun (Dir, File_system) ->
+	       Listener = self (),
+	       Server = xpdojo:start (),
+	       Tell_server = fun (Event, File_name, FS) -> Server ! {self (), Event, File_name, FS} end,
+	       Monitor = file_monitor:start (File_system, Dir, Tell_server),
+	       try
+		   Server ! {add_event_handler, fun (Event) -> Listener ! {self (), Event} end},
+		   {found, {modules, 1}, {unit, 0}, {acceptance, 0}} = receive_one_from (Server),
+		   {compiled, foo, ok} = receive_one_from (Server),
+		   {modules, 1, 1} = receive_one_from (Server),
+		   {unit, 0, 0} = receive_one_from (Server),
+		   {acceptance, 0, 0} = receive_one_from (Server)
+		   after
+		       Server ! stop,
+		     file_monitor:stop (Monitor)
+		   end
+       end).
+
+%%     use_and_purge_tree (
+%%       [foo()],
+%%       fun (Dir,_) ->
+%%               [{acceptance,0,0}, {unit,0,0}, {modules,1,1}] = xpdojo:test_files (Dir, options())
+%%       end).
 
 multi_module_test() ->
     use_and_purge_tree (

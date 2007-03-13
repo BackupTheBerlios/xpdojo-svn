@@ -30,6 +30,19 @@
 -module(xpdojo).
 
 -export([test_files/1, test_files/2, default_options/0, error_only_report/0]).
+-export([start/0]).
+-import(orddict, [new/0]).
+
+start() ->
+    spawn_link(fun() -> loop(new()) end).
+
+loop(State) ->
+    receive
+	stop ->
+	    bye;
+	_ ->
+	    loop(State)
+    end.
 
 default_options () ->
     [{unit_modules_filter, adlib:ends_with("ut")},

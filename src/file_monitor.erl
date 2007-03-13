@@ -67,8 +67,8 @@ report_event ({Event, Files}, Notify, Filesystem) ->
 stop (Pid) ->
     Pid ! stop.
 		   
-bind_content(Fun) ->
-    fun(Event, Filename, Filesystem) when Event == found; Event == modified ->
+bind_content (Fun) ->
+    fun (Event, Filename, Filesystem) when Event == found; Event == modified ->
 	    Filesystem ! {self(), Filename, [content]},
 	    receive {Filesystem, Filename, [{content, Content}]} ->
 		    Fun ({Event, Content}, Filename, Filesystem)
@@ -76,3 +76,6 @@ bind_content(Fun) ->
        (Event, Filename, Filesystem) ->
 	    Fun(Event, Filename, Filesystem)
     end.
+
+bind_forms (Fun) ->
+    Fun.
