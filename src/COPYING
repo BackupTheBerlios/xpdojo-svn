@@ -1,4 +1,5 @@
-%%% Copyright (c) Dominic Williams, Nicolas Charpentier.
+%%% Copyright (c) 2004-2007 Dominic Williams, Nicolas Charpentier,
+%%% Fabrice Nourisson, Jacques Couvreur, Virgile Delecolle.
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -25,30 +26,3 @@
 %%% STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 %%% IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 %%% POSSIBILITY OF SUCH DAMAGE.
-
--module (source).
--export ([erlang_files/1, module/2, module_file/2, lines/1]).
-
-erlang_files (Directory) ->
-    All = filesystem:serve (fun (F) -> filesystem:list_recursively (F, Directory, [type]) end),
-    [Name || {Name, Type} <- All, Type == regular, filename:extension (Name) == ".erl"].
-
-module (Module, [{Function, Lines}]) ->
-    lines (
-      ["-module (" ++ atom_to_list (Module) ++ ").",
-       "-export ([" ++ atom_to_list (Function) ++ "/0]).",
-       atom_to_list (Function) ++ " () ->"
-       | Lines]);
-module (Module, [Function]) ->
-    module (Module, [{Function, ["ok."]}]).
-
-module_file (Module, Functions) ->
-    {file, atom_to_list(Module) ++ ".erl", module (Module, Functions)}.
-lines (Lines) ->
-    lines (Lines, []).
-
-lines ([Line | T ], Acc) ->
-    lines (T, [$\n, Line | Acc]);
-lines ([], Acc) ->
-    lists:flatten (lists:reverse (Acc)).
-
