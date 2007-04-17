@@ -34,7 +34,10 @@
 start(Dir,Notification,Options) ->
     Pid = spawn (?MODULE, loop, [Dir, Notification, Options, no_monitor, init]),
     register(testing_server,Pid),
-    Monitor = file_monitor:start (Dir, fun (Event, File_name) -> Pid ! {self(), Event, File_name} end),
+    File_system = spawn(filesystem,start,[]),
+    Monitor = file_monitor:start (File_system,
+				  Dir, 
+				  fun (Event, File_name, _FileSystem) -> Pid ! {self(), Event, File_name} end),
     Pid ! {monitor, Monitor},
     Pid.
 
@@ -47,6 +50,7 @@ loop (Dir, Notification, Options, no_monitor, State) ->
 	    loop (Dir, Notification, Options, New_monitor, State)
     end;
 loop (Dir, Notification, Options, Monitor, init) ->
+    purge_monitor_message(Monitor),
     State = xpdojo:test_files (Dir, Options),
     Notification (State),
     loop (Dir, Notification, Options, Monitor, State);
@@ -54,7 +58,8 @@ loop (Dir, Notification, Options, Monitor, State) ->
     receive
 	stop ->
 	    file_monitor:stop(Monitor);
-	{Monitor, _, _} ->
+	{Monitor, X, Y} ->
+	    io:format("Receive a event ~p ~p ~n",[X,Y]),
 	    New_state = xpdojo:test_files (Dir, Options),
 	    notify (Notification, New_state, State),
 	    loop (Dir, Notification, Options, Monitor, New_state);
@@ -68,3 +73,11 @@ notify (_, State, State) ->
     ok;
 notify (Notify, New_state, _) ->
     Notify (New_state).
+
+purge_monitor_message(Monitor) ->
+    receive 
+	{Monitor,_,_} ->
+	    purge_monitor_message(Monitor)
+    after 1000 ->
+	    ok
+    end.
