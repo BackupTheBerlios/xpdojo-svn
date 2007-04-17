@@ -20,23 +20,29 @@ loop (Listeners, Smiths, Dashboard) ->
 	{add_event_handler, F} ->
 	    loop ([F | Listeners], Smiths, Dashboard);
 	{_, found, File, _} ->
-	    Smith = handle_new_file (filename:extension (File), File),
-	    loop (Listeners, store (File, Smith, Smiths), Dashboard);
-	{_, _, _, Status} = Event ->
+	    Smith = file_handler (filename:extension (File), File),
+	    loop (Listeners, add_smith (File, Smith, Smiths), Dashboard);
+	{_, _, _, Status, Details} = Event ->
 	    New_dashboard = dashboard:update (Status, Dashboard),
 	    notify (Event, New_dashboard, Listeners),
 	    loop (Listeners, Smiths, New_dashboard)
     end.
 
-notify ({_, _, Module, Status}, Dashboard, Listeners) ->
+notify ({_, _, Module, Status, Details}, Dashboard, Listeners) ->
     lists:foreach (
       fun (F) ->
-	      F ({event, {Module, Status}}),
+	      F ({event, {Module, Status, Details}}),
 	      F (Dashboard)
       end,
       Listeners).
 
-handle_new_file (".erl", File) ->
+file_handler (".erl", File) ->
     Forge = self(),
-    spawn_link (fun () -> smith:start (File, Forge) end).
+    spawn_link (fun () -> smith:start (File, Forge) end);
+file_handler (_, _) ->
+    no_handler.
 
+add_smith (File, Smith, Smiths) when is_pid (Smith) ->
+    store (File, Smith, Smiths);
+add_smith (_, no_handler, Smiths) ->
+    Smiths.

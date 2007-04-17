@@ -1,35 +1,29 @@
-%%% Copyright (c) 2004-2005 Dominic Williams, Nicolas Charpentier,
+%%% Copyright (c) 2004-2007 Dominic Williams, Nicolas Charpentier,
 %%% Fabrice Nourisson, Jacques Couvreur, Virgile Delecolle.
 %%% All rights reserved.
-%%% 
-%%% Redistribution and use in source and binary forms, with or without
-%%% modification, are permitted provided that the following conditions are
-%%% met:
-%%% 
-%%% * Redistributions of source code must retain the above copyright
-%%%   notice, this list of conditions and the following disclaimer.
-%%% * Redistributions in binary form must reproduce the above copyright
-%%%   notice, this list of conditions and the following disclaimer in the
-%%%   documentation and/or other materials provided with the distribution.
-%%% * The names of the authors may not be used to endorse or promote
-%%%   products derived from this software without specific prior written
-%%%   permission.
-%%% 
-%%% THIS SOFTWARE IS PROVIDED BY THE AUTHORS "AS IS" AND ANY EXPRESS OR
-%%% IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-%%% WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-%%% DISCLAIMED. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY DIRECT,
-%%% INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-%%% (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-%%% SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-%%% HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
-%%% STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
-%%% IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-%%% POSSIBILITY OF SUCH DAMAGE.
+%%% See file COPYING.
 
 -module(continuously_test_files_acceptance).
 -compile(export_all).
 -import(testing, [receive_one_from/1, use_and_purge_tree/2, use_and_purge_tree_with_file_system/2]).
+
+test_with_tree_and_forge (Tree, Test) ->
+    use_and_purge_tree_with_file_system (
+      Tree,
+      fun (Dir, File_system) ->
+	      Listener = self (),
+	      Server = forge:start (),
+	      Server ! {add_event_handler, fun (Event) -> Listener ! {self (), Event} end},
+	      Tell_server = fun (Event, File_name, FS) -> Server ! {self (), Event, File_name, FS} end,
+	      Monitor = file_monitor:start (File_system, Dir, Tell_server),
+	      try
+		  Test (Server, Dir, File_system),
+		  {purge, timeout} = {purge, receive_one_from (Server)}
+	      after
+		  Server ! stop,
+		  file_monitor:stop (Monitor)
+	      end
+      end).
 
 foo() ->
     {file,"foo.erl",
@@ -93,55 +87,60 @@ wait() ->
     timer:sleep(1000).
 
 directory_empty_test() ->
-    use_and_purge_tree (
+    test_with_tree_and_forge (
       [],
-      fun(Dir,_) ->
-              no_source_files = xpdojo:test_files (Dir, options())
+      fun (Forge, _, _) ->
+	      timeout = receive_one_from (Forge)
       end).
-
-tree_without_code() ->
-    [{directory, "temporary",
-      [{file, "toto.txt", []},
-       {file, "titi.xml", []}]},
-     {directory, "temp2",
-      [{file, "foo.beam", []},
-       {directory,"sub",
-        [{file, "truc", []},
-         {file, "machin.o", []}]}]}].
 
 tree_without_code_test() ->
-    use_and_purge_tree (
-      tree_without_code(),
-      fun (Dir,_) ->
-              no_source_files = xpdojo:test_files (Dir, options())
+    test_with_tree_and_forge (
+      [{directory, "temporary",
+	[{file, "toto.txt", []},
+	 {file, "titi.xml", []}]},
+       {directory, "temp2",
+	[{file, "foo.beam", []},
+	 {directory,"sub",
+	  [{file, "truc", []},
+	   {file, "machin.o", []}]}]}],
+      fun (Forge, _, _) ->
+	      timeout = receive_one_from (Forge)
       end).
-
+      
 single_module_test () ->
-    use_and_purge_tree_with_file_system (
+    test_with_tree_and_forge (
       [foo()],
-       fun (Dir, File_system) ->
-	       Listener = self (),
-	       Server = forge:start (),
-	       Server ! {add_event_handler, fun (Event) -> Listener ! {self (), Event} end},
-	       Tell_server = fun (Event, File_name, FS) -> Server ! {self (), Event, File_name, FS} end,
-	       Monitor = file_monitor:start (File_system, Dir, Tell_server),
-	       try
-		   {event, {"foo", module}} = receive_one_from (Server),
-		   {dashboard, {{compiled, 0, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server),
-		   {event, {foo, compiled}} = receive_one_from (Server),
-		   {dashboard, {{compiled, 1, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server)
-		   after
-		       Server ! stop,
-		     file_monitor:stop (Monitor)
-		   end
-       end).
-
-multi_module_test() ->
-    use_and_purge_tree (
-      [foo(), bad_bar(), baz()],
-      fun (Dir,_) ->
-              [{modules,3,2}] = xpdojo:test_files (Dir, options())
+      fun (Server, _, _) ->
+	      {event, {"foo", module, _}} = receive_one_from (Server),
+	      {dashboard, {{compiled, 0, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server),
+	      {event, {foo, compiled, []}} = receive_one_from (Server),
+	      {dashboard, {{compiled, 1, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server)
       end).
+
+single_bad_module_test () ->
+    test_with_tree_and_forge (
+      [bad_bar()],
+      fun (Server, _, _) ->
+	      {event, {"bar", module, _}} = receive_one_from (Server),
+	      {dashboard, {{compiled, 0, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server),
+	      {event, {"bar", compile_failed, {Errors, _}}} = receive_one_from (Server),
+	      {errors_exist, true} = {errors_exist, length (Errors) > 0},
+	      {dashboard, {{compiled, 0, 1, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server)
+      end).
+
+%% multi_module_test() ->
+%%     test_with_tree_and_forge (
+%%       [foo(), bad_bar(), baz()],
+%%       fun (Server, _, _) ->
+%% 	      Three = ["foo", "bad_bar", "baz"],
+%% 	      {event, {Module, module}} = receive_one_from (Server),
+%% 	      lists:member (Module, Three),
+%% 	      Two = Three -- [Module],
+%% 	      {dashboard, {{compiled, 0, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server),
+%% 	      {event, {foo, compiled}} = receive_one_from (Server),
+%% 	      {dashboard, {{compiled, 1, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server)
+%%               [{modules,3,2}] = xpdojo:test_files (Dir, options())
+%%       end).
 
 single_module_with_unit_test() ->
     use_and_purge_tree (

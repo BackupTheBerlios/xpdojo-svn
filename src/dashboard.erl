@@ -11,4 +11,6 @@ new () ->
 update (module, {dashboard, {{compiled, Yes, No, Total}, Unit, Acceptance}}) ->
     {dashboard, {{compiled, Yes, No, Total + 1}, Unit, Acceptance}};
 update (compiled, {dashboard, {{compiled, Yes, No, Total}, Unit, Acceptance}}) ->
-    {dashboard, {{compiled, Yes + 1, No, Total}, Unit, Acceptance}}.
+    {dashboard, {{compiled, Yes + 1, No, Total}, Unit, Acceptance}};
+update (compile_failed, {dashboard, {{compiled, Yes, No, Total}, Unit, Acceptance}}) ->
+    {dashboard, {{compiled, Yes, No + 1, Total}, Unit, Acceptance}}.

@@ -14,7 +14,9 @@ update_test() ->
 	      {Count, {dashboard, Expected}} = {Count, dashboard:update (Event, {dashboard, Initital})},
 	      {Count + 1, Expected}
       end,
-      {1,         {{compiled, 0, 0, 0}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}},
-      [{module,   {{compiled, 0, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}},
-       {compiled, {{compiled, 1, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}}]).
+      {1,               {{compiled, 0, 0, 0}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}},
+      [{module,         {{compiled, 0, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}},
+       {compiled,       {{compiled, 1, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}},
+       {module,         {{compiled, 1, 0, 2}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}},
+       {compile_failed, {{compiled, 1, 1, 2}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}}]).
 
