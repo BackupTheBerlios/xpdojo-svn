@@ -76,6 +76,3 @@ bind_content (Fun) ->
        (Event, Filename, Filesystem) ->
 	    Fun(Event, Filename, Filesystem)
     end.
-
-bind_forms (Fun) ->
-    Fun.

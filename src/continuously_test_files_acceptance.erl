@@ -113,7 +113,8 @@ single_module_test () ->
       fun (Server, _, _) ->
 	      {event, {"foo", module, _}} = receive_one_from (Server),
 	      {dashboard, {{compiled, 0, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server),
-	      {event, {foo, compiled, []}} = receive_one_from (Server),
+	      {event, {foo, compiled, Warnings}} = receive_one_from (Server),
+	      [{_, []}] = Warnings,
 	      {dashboard, {{compiled, 1, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server)
       end).
 
@@ -128,19 +129,20 @@ single_bad_module_test () ->
 	      {dashboard, {{compiled, 0, 1, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server)
       end).
 
-%% multi_module_test() ->
-%%     test_with_tree_and_forge (
-%%       [foo(), bad_bar(), baz()],
-%%       fun (Server, _, _) ->
-%% 	      Three = ["foo", "bad_bar", "baz"],
-%% 	      {event, {Module, module}} = receive_one_from (Server),
-%% 	      lists:member (Module, Three),
-%% 	      Two = Three -- [Module],
-%% 	      {dashboard, {{compiled, 0, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server),
-%% 	      {event, {foo, compiled}} = receive_one_from (Server),
-%% 	      {dashboard, {{compiled, 1, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server)
-%%               [{modules,3,2}] = xpdojo:test_files (Dir, options())
-%%       end).
+multi_module_test() ->
+    test_with_tree_and_forge (
+      [foo(), bad_bar(), baz()],
+      fun (Server, _, _) ->
+	      Messages =
+		  lists:foldl (
+		    fun (_, Acc) -> [Acc | receive_one_from (Server)] end,
+		    [],
+		    lists:seq (1, 12)),
+	      check_multi_module_messages (Messages)
+      end).
+
+check_multi_module_messages (Ms) ->
+    {nyi, []} = {nyi, Ms}.
 
 single_module_with_unit_test() ->
     use_and_purge_tree (

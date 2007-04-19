@@ -29,20 +29,19 @@ assistant_loop(File, Smith) ->
     receive
 	compile ->
 	    Result = compile:file (File, [debug_info, binary, return]),
-	    compile_report (File, Result, Smith),
+	    compile_report (Result, Smith),
 	    assistant_loop (File, Smith);
 	_ ->
 	    assistant_loop (File, Smith)
     end.
 
-compile_report (File, {ok, Module, Binary, Warnings}, Smith) ->
-    Smith ! {self(), compiled, Module, Binary, normalise_warnings (File, Warnings, [])};
-compile_report (File, {error, Errors, Warnings}, Smith) ->
-    Smith ! {self(), compile_failed, Errors, Warnings}.
+compile_report ({ok, Module, Binary, Warnings}, Smith) ->
+    Smith ! {self (), compiled, Module, Binary, normalise_warnings (Warnings)};
+compile_report ({error, Errors, Warnings}, Smith) ->
+    Smith ! {self (), compile_failed, Errors, Warnings}.
 
-normalise_warnings (File, [{File, Warnings} | Tail], Acc) ->
-    normalise_warnings (File, Tail, Warnings ++ Acc);
-normalise_warnings (File, [W | Ws], Acc) ->
-    normalise_warnings (File, Ws, Ws ++ Acc);
-normalise_warnings (_, [], Acc) ->
-    Acc.
+normalise_warnings (Warnings) ->
+    lists:foldl (
+      fun ({File, Warning}, Acc) -> orddict:append_list (File, Warning, Acc) end,
+      orddict:new (),
+      Warnings).

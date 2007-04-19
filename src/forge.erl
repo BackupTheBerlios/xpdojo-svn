@@ -22,7 +22,7 @@ loop (Listeners, Smiths, Dashboard) ->
 	{_, found, File, _} ->
 	    Smith = file_handler (filename:extension (File), File),
 	    loop (Listeners, add_smith (File, Smith, Smiths), Dashboard);
-	{_, _, _, Status, Details} = Event ->
+	{_, _, _, Status, _} = Event ->
 	    New_dashboard = dashboard:update (Status, Dashboard),
 	    notify (Event, New_dashboard, Listeners),
 	    loop (Listeners, Smiths, New_dashboard)
