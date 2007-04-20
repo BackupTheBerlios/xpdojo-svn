@@ -40,6 +40,13 @@ unique_erlang_module() ->
 unique_erlang_module_beam() ->
     "uniqueModule.beam".
 
+unused_import_erlang_module() ->
+    {file,"foo.erl",
+     ["-module(foo).",
+      "-import(orddict,[new/3]).",
+      "-export([bar/0]).",
+      "bar() -> ok."]}.
+    
 foo_ut() ->
     {file,"foo_ut.erl",
      ["-module(foo_ut).",
@@ -473,3 +480,13 @@ no_beam_creation_test() ->
 	      {error,enoent} = file:open(filename:join(CurrentDir,unique_erlang_module_beam()),[read])
       end).
     
+unused_import_test() ->
+    test_with_tree_and_forge (
+      [unused_import_erlang_module()],
+      fun (Server, _, _) ->
+	      {event, {"foo", module, _}} = receive_one_from (Server),
+	      {dashboard, {{compiled, 0, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server),
+	      {event, {foo, compiled, Warnings}} = receive_one_from (Server),
+	      [{_,[{_,_,{unused_import,{{new,3},orddict}}}]}] = Warnings,
+	      {dashboard, {{compiled, 1, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server)
+      end).

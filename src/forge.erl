@@ -4,7 +4,7 @@
 
 -module (forge).
 -export ([start/0]).
--import (orddict, [append/3, fetch/2, new/0, store/3]).
+-import (orddict, [new/0, store/3]).
 
 start () ->
     spawn_link (fun () -> init() end).

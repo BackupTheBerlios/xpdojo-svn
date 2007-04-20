@@ -28,7 +28,7 @@ smith_loop (Forge, File, M, Status, Assistant) ->
 assistant_loop(File, Smith) ->
     receive
 	compile ->
-	    Result = compile:file (File, [debug_info, binary, return]),
+	    Result = compile:file (File, [debug_info, binary, warn_unused_import, return]),
 	    compile_report (Result, Smith),
 	    assistant_loop (File, Smith);
 	_ ->
