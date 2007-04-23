@@ -58,8 +58,7 @@ loop (Dir, Notification, Options, Monitor, State) ->
     receive
 	stop ->
 	    file_monitor:stop(Monitor);
-	{Monitor, X, Y} ->
-	    io:format("Receive a event ~p ~p ~n",[X,Y]),
+	{Monitor, _, _} ->
 	    New_state = xpdojo:test_files (Dir, Options),
 	    notify (Notification, New_state, State),
 	    loop (Dir, Notification, Options, Monitor, New_state);
