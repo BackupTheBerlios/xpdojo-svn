@@ -3,9 +3,9 @@
 %%% All rights reserved.
 %%% See file COPYING.
 
--module(continuously_test_files_acceptance).
--compile(export_all).
--import(testing, [receive_one_from/1, use_and_purge_tree/2, use_and_purge_tree_with_file_system/2]).
+-module (test_files_acceptance).
+-compile (export_all).
+-import (testing, [receive_one_from/1, use_and_purge_tree/2, use_and_purge_tree_with_file_system/2]).
 
 test_with_tree_and_forge (Tree, Test) ->
     use_and_purge_tree_with_file_system (
