@@ -271,3 +271,4 @@ replayed.
 
 Import code from an existing project.
 
+Idée (de RJ):No need to make a snapshot of the entire codeline, though in a more "real"system, my fantasy is that every green bar updates every computer in theuniverse with the version that just went green.De moi (inspiré par Joe):Marqué tous les modules (y compris de la distrib Erlang) utilisés lors del'exécution des tests de recettes, et utiliser cette liste pour préparerun package de livraison le plus compacte possible.

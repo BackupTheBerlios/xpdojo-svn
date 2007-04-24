@@ -112,8 +112,9 @@ Abstraction (équivalent a l'héritage): fonction d'ordre superieur.
 
 DSL:
 
-Externes: fichier de config en langage natif
+Externes: fichier de config en langage natif (structures symboliques natives plutôt que XML).
 Internes: pseudo langage spécifique a un besoin, mais qui est en fait code en Erlang... (exemple: parser combinators?)
+Parsers: ...
 
 
 ** Tableau comparatif des langages fonctionnels p/r a XP
@@ -134,8 +135,10 @@ Vérifier que ça tient en 90 minutes.
 
 *** Bien pour refactoring?
 
-- bonne plasticité.
-
+- typage dynamique + filtrage simplifie la plupart des remaniements.
+- les modules sont indépendants
+- transparence référentielle induit une bonne plasticité (structure gigognes plutôt que graphes complexes).
+- la correction à chaud accélère le cycle de remaniement
 - certains refactorings spécifiques à Erlang.
 
 *** Typage statique ou dynamique?
@@ -146,7 +149,7 @@ Typage statique utile pour:
 
 2) vérifier des choses à la compilation
 
-==> devient superflu avec TDD
+Or, c'est un moyen imparfait d'atteindre ces deux objectifs. Au contraire, le TDD permet de les atteindre tous les deux, et rend alors superflu le typage statique.
 
 (N.B. typage statique est moins "lourd" dans les langages fonctionnels, car ils font en général de l'inférence).
 

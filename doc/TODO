@@ -36,6 +36,7 @@ Continuous file testing:
 - Avoid recompiling when changing case of directory, or introducing ../.. 
   (idea: the simplest may be to write an adlib:normalise_path/1 function, and call it at the top of
   xpdojo:test_files).
+- What happens when there are no exported functions in the only module? (I think I saw this crash but I was busy on something else).
 
 General:
 
