@@ -1,3 +1,16 @@
+WARNING:
+
+As of April 2007, XP Dojo has moved to http://www.extremeforge.net.
+
+The original locations:
+
+http://www.xpdojo.net
+http://developer.berlios.de/projects/xpdojo
+
+are no longer being maintained.
+
+The following information concerns the software as it was at the time.
+
 XP Dojo
 -------
 
@@ -16,17 +29,59 @@ The aims of this software are:
 * To facilitate the use of extreme programming on distributed
   projects, including open source ones.
 
+Requirements
+-----------
+
+Erlang/OTP R10B4 or above.
+
 Installation
 ------------
 
-A COMPLETER
+Download the tarball, unpack to any convenient location.
+Change to the ./ebin subdirectory, then
+start an erlang shell in distributed mode, e.g.:
+
+% erl -sname xpdojo
+
+Then, from the erlang shell prompt, first compile:
+
+1> make:all().
+
+then run the tests to ensure that xpdojo is working on your platform:
+
+2> xpdojo:test_files("..").
+
+After some output (including process crashes, they are part of the
+testing process), you should get a last line of output like this:
+
+[{acceptance,39,39},{unit,101,101},{modules,27,27}]
+
+This means that all unit and acceptance tests have passed. If the
+numbers are different, some things are not working as expected.
+
+Using
+-----
+
+You can now test any source tree of your own in the same way:
+
+3> xpdojo:test_files("/some/path/to/source").
+
+Or, for a more interesting experience, run the continuous testing
+server:
+
+4> testing_server:start("/some/path/to/source", fun(M) ->
+io:fwrite("~p~n", [M]) end, xpdojo:default_options()).
+
+Read src/test_files_acceptance.erl for more details (such as
+defining your own rules for detecting unit and acceptance tests).
 
 LEGAL MATTERS
 -------------
 
 The software contained herein is:
 
-Copyright (c) 2004 Dominic Williams, Nicolas Charpentier.
+Copyright (c) 2004-2007 Dominic Williams, Nicolas Charpentier,
+Fabrice Nourisson, Jacques Couvreur, Virgile Delecolle.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
