@@ -18,7 +18,8 @@ test_with_tree_and_forge (Tree, Test) ->
 	      Monitor = file_monitor:start (File_system, Dir, Tell_server),
 	      try
 		  Test (Server, Dir, File_system),
-		  {purge, timeout} = {purge, receive_one_from (Server)}
+		  {purge, timeout} = {purge, receive_one_from (Server)},
+		  ok
 	      after
 		  Server ! stop,
 		  file_monitor:stop (Monitor)
@@ -118,22 +119,22 @@ single_module_test () ->
     test_with_tree_and_forge (
       [foo()],
       fun (Server, _, _) ->
-	      {event, {"foo", module, _}} = receive_one_from (Server),
-	      {dashboard, {{compiled, 0, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server),
-	      {event, {foo, compiled, Warnings}} = receive_one_from (Server),
-	      {warning_test,[]} = {warning_test,Warnings},
-	      {dashboard, {{compiled, 1, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server)
+	      {event, {"foo", {module, uncompiled}, _}} = receive_one_from (Server),
+	      {dashboard, {{modules, 0, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server),
+	      {event, {foo, {module, compiled}, Warnings}} = receive_one_from (Server),
+	      {no_warnings, []} = {no_warnings, Warnings},
+	      {dashboard, {{modules, 1, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server)
       end).
 
 single_bad_module_test () ->
     test_with_tree_and_forge (
       [bad_bar()],
       fun (Server, _, _) ->
-	      {event, {"bar", module, _}} = receive_one_from (Server),
-	      {dashboard, {{compiled, 0, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server),
-	      {event, {"bar", compile_failed, {Errors, _}}} = receive_one_from (Server),
+	      {event, {"bar", {module, uncompiled}, _}} = receive_one_from (Server),
+	      {dashboard, {{modules, 0, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server),
+	      {event, {"bar", {module, errors}, {Errors, _}}} = receive_one_from (Server),
 	      {errors_exist, true} = {errors_exist, length (Errors) > 0},
-	      {dashboard, {{compiled, 0, 1, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server)
+	      {dashboard, {{modules, 0, 1, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server)
       end).
 
 multi_module_test() ->
@@ -141,15 +142,94 @@ multi_module_test() ->
       [foo(), bad_bar(), baz()],
       fun (Server, _, _) ->
 	      Messages =
-		  lists:foldl (
-		    fun (_, Acc) -> [receive_one_from (Server)|Acc] end,
-		    [],
-		    lists:seq (1, 12)),
-	      check_multi_module_messages (lists:reverse(Messages))
+		  lists:reverse (
+		    lists:foldl (
+		      fun (_, Acc) ->
+			      Received =
+				  receive {Server, Msg} -> Msg
+				  after 30000 -> timeout end,
+			      [Received | Acc]
+		      end,
+		      [],
+		      lists:seq (1, 12))),
+	      check_multi_module_messages (Messages)
       end).
 
-check_multi_module_messages (Ms) ->
-    {nyi, []} = {nyi, Ms}.
+check_multi_module_messages (Messages) ->
+    Make_pairs =
+	fun (Event, {[], Pairs}) ->
+		{[Event], Pairs};
+	    (Dashboard, {[Event], Pairs}) ->
+		{[], [{Event, Dashboard} | Pairs]}
+	end,
+    {[], Pairs} = lists:foldl (Make_pairs, {[], []}, Messages),
+    check_event_dashboard_pairs (lists:reverse(Pairs)).
+
+check_event_dashboard_pairs (Pairs) ->
+    {Module_events, Compile_events} = lists:split (3, Pairs),
+    check_module_event_pairs (Module_events),
+    check_compile_event_pairs (Compile_events).
+
+check_module_event_pairs (Pairs) ->
+    {4, Modules} =
+	lists:foldl (
+	  fun ({{event, {Module, {module, uncompiled}, _}},
+		{dashboard, {{modules, 0, 0, Count}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}}},
+	       {Count, Modules}) ->
+		  {Count + 1, [Module | Modules]}
+	  end,
+	  {1, []},
+	  Pairs),
+    ["bar", "baz", "foo"] = lists:sort (Modules).
+
+check_compile_event_pairs (Pairs) ->
+    Simplified =
+	[{Mod, Result, Yes, No, Total}
+	 || {{event, {Mod, {module, Result}, _}}, {dashboard, {{modules, Yes, No, Total}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}}}
+		<- Pairs],
+    Results =
+	lists:keysort (1, [{Mod, Res} || {Mod, Res, _, _, _} <- Simplified]),
+    [{baz, compiled}, {foo, compiled}, {"bar", errors}] = Results,
+    lists:foldl (
+      fun ({_, Result, Yes, No, 3}, {Old_yes, Old_no}) ->
+	      case Result of
+		  compiled ->
+		      Yes = Old_yes + 1,
+		      No = Old_no;
+		  errors ->
+		      Yes = Old_yes,
+		      No = Old_no + 1
+	      end,
+	      {Yes, No}
+      end,
+      {0, 0},
+      Simplified).
+
+change_single_module_test() ->
+    test_with_tree_and_forge (
+      [foo()],
+      fun (Forge, Dir, _) ->
+	      {event, {"foo", {module, uncompiled}, _}} = receive_one_from (Forge),
+              {dashboard, {{modules, 0, 0, 1}, _, _} }= receive_one_from (Forge),
+	      {event, {foo, {module, compiled}, _}} = receive_one_from (Forge),
+              {dashboard, {{modules, 1, 0, 1}, _, _}} = receive_one_from (Forge),
+              file:write_file(filename:join(Dir,"foo.erl"),
+                              "-module(foo).\n"
+                              "-export([yo/0]).\n"
+                              "yo() - yohoho."),
+	      {event, {foo, {module, uncompiled}, _}} = receive_one_from (Forge),
+              {dashboard, {{modules, 0, 0, 1}, _, _}} = receive_one_from (Forge),
+	      {event, {foo, {module, errors}, _}} = receive_one_from (Forge),
+              {dashboard, {{modules, 0, 1, 1}, _, _}} = receive_one_from (Forge),
+              file:write_file(filename:join(Dir,"foo.erl"),
+                              "-module(foo).\n"
+                              "-export([yo/0]).\n"
+                              "yo() -> yohoho."),
+	      {event, {foo, {module, uncompiled}, _}} = receive_one_from (Forge),
+              {dashboard, {{modules, 0, 0, 1}, _, _}} = receive_one_from (Forge),
+	      {event, {foo, {module, compiled}, _}} = receive_one_from (Forge),
+              {dashboard, {{modules, 1, 0, 1}, _, _}} = receive_one_from (Forge)
+      end).
 
 single_module_with_unit_test() ->
     use_and_purge_tree (
@@ -296,26 +376,6 @@ continuous_tester_test() ->
 		 {fun() -> file:write_file (filename:join (Dir, "pepe.erl"), source:module (pepe, [juan])) end,
 		  timeout}])
       end).
-
-continue_after_compile_error_test() ->
-    use_and_purge_tree (
-      [foo()],
-      fun (Dir,_) ->
-              [{acceptance,0,0},{unit,0,0},{modules,1,1}] = xpdojo:test_files (Dir, options()),
-              wait(),
-              file:write_file(filename:join(Dir,"foo.erl"),
-                              "-module(foo).\n"
-                              "-export([yo/0]).\n"
-                              "yo() - yohoho."),
-              [{modules,1,0}] = xpdojo:test_files (Dir, options()),
-              wait(),
-              file:write_file(filename:join(Dir,"foo.erl"),
-                              "-module(foo).\n"
-                              "-export([yo/0]).\n"
-                              "yo() -> yohoho."),
-              [{acceptance,0,0},{unit,0,0},{modules,1,1}] = xpdojo:test_files (Dir, options())
-      end).
-
 
 custom_report_function_compile_error_test() ->
     Options = 
@@ -485,9 +545,9 @@ unused_import_test() ->
     test_with_tree_and_forge (
       [unused_import_erlang_module()],
       fun (Server, _, _) ->
-	      {event, {"foo", module, _}} = receive_one_from (Server),
-	      {dashboard, {{compiled, 0, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server),
-	      {event, {foo, compiled, Warnings}} = receive_one_from (Server),
+	      {event, {"foo", {module, uncompiled}, _}} = receive_one_from (Server),
+	      {dashboard, {{modules, 0, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server),
+	      {event, {foo, {module, compiled}, Warnings}} = receive_one_from (Server),
 	      [{_,[{_,_,{unused_import,{{new,3},orddict}}}]}] = Warnings,
-	      {dashboard, {{compiled, 1, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server)
+	      {dashboard, {{modules, 1, 0, 1}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}} = receive_one_from (Server)
       end).

@@ -6,11 +6,17 @@
 -export ([new/0, update/2]).
     
 new () ->
-    {dashboard, {{compiled, 0, 0, 0}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}}.
+    {dashboard, {{modules, 0, 0, 0}, {unit, 0, 0, 0}, {acceptance, 0, 0, 0}}}.
 
-update (module, {dashboard, {{compiled, Yes, No, Total}, Unit, Acceptance}}) ->
-    {dashboard, {{compiled, Yes, No, Total + 1}, Unit, Acceptance}};
-update (compiled, {dashboard, {{compiled, Yes, No, Total}, Unit, Acceptance}}) ->
-    {dashboard, {{compiled, Yes + 1, No, Total}, Unit, Acceptance}};
-update (compile_failed, {dashboard, {{compiled, Yes, No, Total}, Unit, Acceptance}}) ->
-    {dashboard, {{compiled, Yes, No + 1, Total}, Unit, Acceptance}}.
+update ({unknown, {module, uncompiled}}, {dashboard, {{modules, Yes, No, Total}, Unit, Acceptance}}) ->
+    {dashboard, {{modules, Yes, No, Total + 1}, Unit, Acceptance}};
+update ({{module, uncompiled}, {module, errors}}, {dashboard, {{modules, Yes, No, Total}, Unit, Acceptance}}) ->
+    {dashboard, {{modules, Yes, No + 1, Total}, Unit, Acceptance}};
+update ({{module, errors}, {module, uncompiled}}, {dashboard, {{modules, Yes, No, Total}, Unit, Acceptance}}) ->
+    {dashboard, {{modules, Yes, No - 1, Total}, Unit, Acceptance}};
+update ({{module, uncompiled}, {module, compiled}}, {dashboard, {{modules, Yes, No, Total}, Unit, Acceptance}}) ->
+    {dashboard, {{modules, Yes + 1, No, Total}, Unit, Acceptance}};
+update ({{module, compiled}, {module, uncompiled}}, {dashboard, {{modules, Yes, No, Total}, Unit, Acceptance}}) ->
+    {dashboard, {{modules, Yes - 1, No, Total}, Unit, Acceptance}};
+update ({{module, compiled}, {unit, compiled}}, {dashboard, {Modules, {unit, Yes, No, Total}, Acceptance}}) ->
+    {dashboard, {Modules, {unit, Yes, No, Total + 1}, Acceptance}}.

@@ -8,19 +8,26 @@
 start (File, Forge) ->
     Smith = self(),
     Module = filename:basename (File, ".erl"),
-    Forge ! {Smith, File, Module, module, []},
+    Forge ! {Smith, File, Module, {unknown, {module, uncompiled}}, []},
     Assistant = spawn_link (fun () -> assistant_loop (File, Smith) end),
     Assistant ! compile,
-    smith_loop(Forge, File, Module, module, Assistant).
+    smith_loop(Forge, File, Module, {module, uncompiled}, Assistant).
 
-smith_loop (Forge, File, M, Status, Assistant) ->
+smith_loop (Forge, File, M, {Type, _}=Status, Assistant) ->
     receive
 	{Assistant, compiled, Module, _, Warnings} ->
-	    Forge ! {self(), File, Module, compiled, Warnings},
-	    smith_loop (Forge, File, Module, compiled, Assistant);
+	    New_status = {Type, compiled},
+	    Forge ! {self(), File, Module, {Status, New_status}, Warnings},
+	    smith_loop (Forge, File, Module, New_status, Assistant);
 	{Assistant, compile_failed, Errors, Warnings} ->
-	    Forge ! {self(), File, M, compile_failed, {Errors, Warnings}},
-	    smith_loop (Forge, File, M, compile_failed, Assistant);
+	    New_status = {Type, errors},
+	    Forge ! {self(), File, M, {Status, New_status}, {Errors, Warnings}},
+	    smith_loop (Forge, File, M, New_status, Assistant);
+	{Forge, modified} ->
+	    New_status = {Type, uncompiled},
+	    Forge ! {self(), File, M, {Status, New_status}, []},
+	    Assistant ! compile,
+	    smith_loop (Forge, File, M, New_status, Assistant);
 	_ ->
 	    smith_loop (Forge, File, M, Status, Assistant)
     end.
@@ -36,12 +43,12 @@ assistant_loop(File, Smith) ->
     end.
 
 compile_report ({ok, Module, Binary, Warnings}, Smith) ->
-    Smith ! {self (), compiled, Module, Binary, normalise_warnings (Warnings)};
+    Smith ! {self (), compiled, Module, Binary, Warnings};
 compile_report ({error, Errors, Warnings}, Smith) ->
     Smith ! {self (), compile_failed, Errors, Warnings}.
 
-normalise_warnings (Warnings) ->
-    lists:foldl (
-      fun ({File, Warning}, Acc) -> orddict:append_list (File, Warning, Acc) end,
-      orddict:new (),
-      Warnings).
+%% normalise_warnings (Warnings) ->
+%%     lists:foldl (
+%%       fun ({File, Warning}, Acc) -> orddict:append_list (File, Warning, Acc) end,
+%%       orddict:new (),
+%%       Warnings).

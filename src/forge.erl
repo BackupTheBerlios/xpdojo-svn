@@ -4,7 +4,7 @@
 
 -module (forge).
 -export ([start/0]).
--import (orddict, [new/0, store/3]).
+-import (orddict, [fetch/2, new/0, store/3]).
 
 start () ->
     spawn_link (fun () -> init() end).
@@ -22,13 +22,17 @@ loop (Listeners, Smiths, Dashboard) ->
 	{_, found, File, _} ->
 	    Smith = file_handler (filename:extension (File), File),
 	    loop (Listeners, add_smith (File, Smith, Smiths), Dashboard);
+	{_, modified, File, _} ->
+	    Smith = fetch (File, Smiths),
+	    Smith ! {self(), modified},
+	    loop (Listeners, Smiths, Dashboard);
 	{_, _, _, Status, _} = Event ->
 	    New_dashboard = dashboard:update (Status, Dashboard),
 	    notify (Event, New_dashboard, Listeners),
 	    loop (Listeners, Smiths, New_dashboard)
     end.
 
-notify ({_, _, Module, Status, Details}, Dashboard, Listeners) ->
+notify ({_, _, Module, {_, Status}, Details}, Dashboard, Listeners) ->
     lists:foreach (
       fun (F) ->
 	      F ({event, {Module, Status, Details}}),
